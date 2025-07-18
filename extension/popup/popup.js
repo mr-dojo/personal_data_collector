@@ -16,6 +16,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await updateStats();
   await loadNotes();
+  
+  // Ensure naming modal is hidden on startup
+  const namingContainer = document.getElementById('postActionNaming');
+  if (namingContainer) {
+    namingContainer.classList.add('hidden');
+  }
 
   captureBtn.addEventListener('click', async () => {
     try {
@@ -43,13 +49,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         
         showStatus('Page captured successfully!', 'success');
-        const hadCustomTitle = customTitle.length > 0;
+        const hadCustomTitle = customTitle && customTitle.length > 0;
         titleInput.value = '';
         await updateStats();
         await loadNotes();
         
-        // Start post-action naming if no custom title was provided
-        if (!hadCustomTitle) {
+        // Start post-action naming if no custom title was provided and pageData is valid
+        if (!hadCustomTitle && pageData && pageData.hash && pageData.title) {
           startPostActionNaming(pageData.title, pageData.hash);
         }
       }
@@ -105,8 +111,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       await updateStats();
       await loadNotes();
       
-      // Start post-action naming if no custom title was provided
-      if (!customTitle) {
+      // Start post-action naming if no custom title was provided and clipboardData is valid
+      const hasCustomTitle = customTitle && customTitle.length > 0;
+      if (!hasCustomTitle && clipboardData && clipboardData.hash && clipboardData.title) {
         startPostActionNaming(clipboardData.title, clipboardData.hash);
       }
       
@@ -451,8 +458,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // Global variables to track modal state
+  let currentNamingTimer = null;
+  let namingEventListeners = [];
+
   function startPostActionNaming(defaultTitle, contentId) {
     try {
+      // Debug logging
+      console.log('Starting post-action naming with title:', defaultTitle, 'and ID:', contentId);
+      
       const namingContainer = document.getElementById('postActionNaming');
       const titleInput = document.getElementById('postActionTitle');
       const timerSpan = document.getElementById('countdownTimer');
@@ -462,46 +476,102 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Required DOM elements not found for post-action naming');
         return;
       }
+
+      // Clean up any existing modal state
+      hideNamingModal();
       
       namingContainer.classList.remove('hidden');
       titleInput.value = sanitizeText(defaultTitle) || '';
-      titleInput.focus();
       
       let countdown = 10;
       timerSpan.textContent = `${countdown}s`;
       
-      const timer = setInterval(() => {
+      currentNamingTimer = setInterval(() => {
         countdown--;
         timerSpan.textContent = `${countdown}s`;
         
         if (countdown <= 0) {
-          clearInterval(timer);
+          clearInterval(currentNamingTimer);
           completeNaming(titleInput.value, contentId);
         }
       }, 1000);
       
       const stopTimer = () => {
-        clearInterval(timer);
+        if (currentNamingTimer) {
+          clearInterval(currentNamingTimer);
+          currentNamingTimer = null;
+        }
         timerSpan.textContent = 'Press Enter';
       };
       
-      titleInput.addEventListener('input', stopTimer, { once: true });
+      // Input event listener
+      const inputHandler = () => {
+        stopTimer();
+        titleInput.removeEventListener('input', inputHandler);
+      };
+      titleInput.addEventListener('input', inputHandler);
+      namingEventListeners.push({ element: titleInput, event: 'input', handler: inputHandler });
       
-      titleInput.addEventListener('keydown', (e) => {
+      // Keydown event listener
+      const keydownHandler = (e) => {
         if (e.key === 'Enter') {
-          clearInterval(timer);
+          e.preventDefault();
+          stopTimer();
           completeNaming(titleInput.value, contentId);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          hideNamingModal();
         }
-      });
+      };
+      titleInput.addEventListener('keydown', keydownHandler);
+      namingEventListeners.push({ element: titleInput, event: 'keydown', handler: keydownHandler });
       
-      confirmBtn.addEventListener('click', () => {
-        clearInterval(timer);
+      // Confirm button event listener
+      const confirmHandler = () => {
+        stopTimer();
         completeNaming(titleInput.value, contentId);
-      });
+      };
+      confirmBtn.addEventListener('click', confirmHandler);
+      namingEventListeners.push({ element: confirmBtn, event: 'click', handler: confirmHandler });
+      
+      // Modal background click to dismiss
+      const modalClickHandler = (e) => {
+        if (e.target === namingContainer) {
+          hideNamingModal();
+        }
+      };
+      namingContainer.addEventListener('click', modalClickHandler);
+      namingEventListeners.push({ element: namingContainer, event: 'click', handler: modalClickHandler });
+      
+      // Focus the input after a brief delay
+      setTimeout(() => {
+        titleInput.focus();
+        titleInput.select();
+      }, 100);
+      
     } catch (error) {
       console.error('Error in post-action naming:', error);
       showStatus('Naming feature unavailable', 'error');
     }
+  }
+
+  function hideNamingModal() {
+    const namingContainer = document.getElementById('postActionNaming');
+    if (namingContainer) {
+      namingContainer.classList.add('hidden');
+    }
+    
+    // Clean up timer
+    if (currentNamingTimer) {
+      clearInterval(currentNamingTimer);
+      currentNamingTimer = null;
+    }
+    
+    // Clean up event listeners
+    namingEventListeners.forEach(({ element, event, handler }) => {
+      element.removeEventListener(event, handler);
+    });
+    namingEventListeners = [];
   }
 
   function completeNaming(finalTitle, contentId) {
@@ -519,28 +589,28 @@ document.addEventListener('DOMContentLoaded', async () => {
               if (chrome.runtime.lastError) {
                 console.error('Storage error:', chrome.runtime.lastError);
                 showStatus('Failed to update title', 'error');
+                hideNamingModal();
                 return;
               }
               
-              const namingContainer = document.getElementById('postActionNaming');
-              if (namingContainer) {
-                namingContainer.classList.add('hidden');
-              }
-              
+              hideNamingModal();
               updateStats();
               loadNotes();
               showStatus('Title updated!', 'success');
             });
           } else {
+            hideNamingModal();
             showStatus('Item not found', 'error');
           }
         } catch (error) {
           console.error('Error processing naming completion:', error);
+          hideNamingModal();
           showStatus('Failed to update title', 'error');
         }
       });
     } catch (error) {
       console.error('Error in complete naming:', error);
+      hideNamingModal();
       showStatus('Naming update failed', 'error');
     }
   }
