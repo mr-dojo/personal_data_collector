@@ -1,0 +1,15 @@
+# PDC specific
+credentials.json
+token.json
+data/
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.venv/
+venv/
