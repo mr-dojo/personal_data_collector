@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const captureBtn = document.getElementById('captureBtn');
+  const clipboardBtn = document.getElementById('clipboardBtn');
   const titleInput = document.getElementById('titleInput');
   const exportMdBtn = document.getElementById('exportMd');
   const exportTxtBtn = document.getElementById('exportTxt');
@@ -45,6 +46,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     } finally {
       captureBtn.disabled = false;
       captureBtn.textContent = 'Capture This Page';
+    }
+  });
+
+  clipboardBtn.addEventListener('click', async () => {
+    try {
+      clipboardBtn.disabled = true;
+      clipboardBtn.textContent = 'Reading...';
+      
+      const text = await navigator.clipboard.readText();
+      
+      if (!text || text.trim().length === 0) {
+        showStatus('Clipboard is empty', 'error');
+        return;
+      }
+      
+      const customTitle = titleInput.value.trim();
+      const clipboardData = {
+        title: customTitle || 'Clipboard Content',
+        url: 'clipboard://local',
+        content: text.trim(),
+        timestamp: Date.now(),
+        hash: generateHash(text.trim() + 'clipboard://local'),
+        metadata: {
+          source: 'clipboard',
+          type: 'text'
+        }
+      };
+      
+      await chrome.runtime.sendMessage({
+        action: 'storeContent',
+        data: clipboardData
+      });
+      
+      showStatus('Clipboard content saved!', 'success');
+      titleInput.value = '';
+      titleInput.focus();
+      await updateStats();
+      
+    } catch (error) {
+      console.error('Clipboard error:', error);
+      showStatus('Failed to read clipboard', 'error');
+    } finally {
+      clipboardBtn.disabled = false;
+      clipboardBtn.textContent = '📋 From Clipboard';
     }
   });
 
@@ -142,5 +187,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => {
       status.classList.add('hidden');
     }, 3000);
+  }
+
+  function generateHash(input) {
+    let hash = 0;
+    if (input.length === 0) return hash.toString(36);
+    
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    
+    return Math.abs(hash).toString(36);
   }
 });

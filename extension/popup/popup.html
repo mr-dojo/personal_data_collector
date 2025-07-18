@@ -34,36 +34,63 @@
       margin-bottom: 24px;
     }
 
-    .capture-btn {
-      width: 100%;
+    .capture-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .capture-btn, .clipboard-btn {
       padding: 12px;
-      background: #2563eb;
-      color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 20px;
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
-      transition: background-color 0.2s;
+      transition: all 0.2s;
+    }
+
+    .capture-btn {
+      background: #2563eb;
+      color: white;
     }
 
     .capture-btn:hover {
       background: #1d4ed8;
+      transform: translateY(-1px);
     }
 
-    .capture-btn:disabled {
+    .clipboard-btn {
+      background: #10b981;
+      color: white;
+    }
+
+    .clipboard-btn:hover {
+      background: #059669;
+      transform: translateY(-1px);
+    }
+
+    .capture-btn:disabled, .clipboard-btn:disabled {
       background: #9ca3af;
       cursor: not-allowed;
+      transform: none;
     }
 
     .title-input {
       width: 100%;
-      padding: 8px 12px;
+      padding: 12px 16px;
       border: 1px solid #d1d5db;
-      border-radius: 4px;
+      border-radius: 25px;
       font-size: 14px;
       margin-bottom: 12px;
       box-sizing: border-box;
+      transition: all 0.2s;
+    }
+
+    .title-input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     }
 
     .stats {
@@ -151,7 +178,10 @@
 
   <div class="capture-section">
     <input type="text" class="title-input" id="titleInput" placeholder="Custom title (optional)">
-    <button class="capture-btn" id="captureBtn">Capture This Page</button>
+    <div class="capture-buttons">
+      <button class="capture-btn" id="captureBtn">Capture This Page</button>
+      <button class="clipboard-btn" id="clipboardBtn">📋 From Clipboard</button>
+    </div>
   </div>
 
   <div class="stats" id="stats">
