@@ -3,485 +3,260 @@
 <head>
   <meta charset="utf-8">
   <style>
-    body {
-      width: 350px;
-      max-height: 600px;
+    * {
       margin: 0;
-      padding: 16px;
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 14px;
-      background: #ffffff;
-      overflow-y: auto;
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .logo {
-      font-size: 18px;
-      font-weight: bold;
-      color: #2563eb;
-      margin-bottom: 4px;
-    }
-
-    .tagline {
-      font-size: 12px;
-      color: #6b7280;
-    }
-
-    .capture-section {
-      margin-bottom: 24px;
-    }
-
-    .capture-buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .capture-btn, .clipboard-btn {
-      padding: 12px;
-      border: none;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .capture-btn {
-      background: #f3f4f6;
-      color: #374151;
-      border: 1px solid #d1d5db;
-    }
-
-    .capture-btn:hover {
-      background: #e5e7eb;
-      transform: translateY(-1px);
-    }
-
-    .clipboard-btn {
-      background: #2563eb;
-      color: white;
-      font-size: 16px;
-      font-weight: 600;
-      padding: 12px 24px;
-      border-radius: 24px;
-      box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
-    }
-
-    .clipboard-btn:hover {
-      background: #1d4ed8;
-      transform: translateY(-1px);
-      box-shadow: 0 6px 8px rgba(37, 99, 235, 0.25);
-    }
-
-    .capture-btn:disabled, .clipboard-btn:disabled {
-      background: #9ca3af;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .title-input {
-      width: 100%;
-      padding: 12px 16px;
-      border: 1px solid #d1d5db;
-      border-radius: 25px;
-      font-size: 14px;
-      margin-bottom: 12px;
+      padding: 0;
       box-sizing: border-box;
-      transition: all 0.2s;
     }
 
-    .title-input:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    }
-
-    .stats {
-      background: #f9fafb;
-      padding: 12px;
-      border-radius: 6px;
-      margin-bottom: 20px;
-    }
-
-    .stats-row {
+    body {
+      width: 360px;
+      height: 200px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-      color: #374151;
-      margin-bottom: 4px;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
     }
 
-    .stats-row:last-child {
-      margin-bottom: 0;
+    .main-input {
+      width: 320px;
+      height: 56px;
+      border: none;
+      border-radius: 28px;
+      padding: 0 24px;
+      font-size: 16px;
+      font-weight: 400;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+      color: #1a1a1a;
     }
 
-    .export-section {
-      border-top: 1px solid #e5e7eb;
-      padding-top: 20px;
+    .main-input::placeholder {
+      color: #666;
+      font-weight: 300;
     }
 
-    .export-title {
-      font-weight: 500;
-      margin-bottom: 12px;
-      color: #374151;
+    .main-input:focus {
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.98);
     }
 
-    .export-buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
+    .floating-actions {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      gap: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .export-btn {
-      padding: 8px 12px;
-      background: #f3f4f6;
-      color: #374151;
-      border: 1px solid #d1d5db;
-      border-radius: 4px;
-      font-size: 12px;
+    .floating-actions.visible {
+      opacity: 1;
+      pointer-events: all;
+      transform: translate(-50%, -50%) translateY(-10px);
+    }
+
+    .action-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(20px);
       cursor: pointer;
-      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      position: relative;
+      overflow: hidden;
     }
 
-    .export-btn:hover {
-      background: #e5e7eb;
-      border-color: #9ca3af;
-    }
-
-    .status {
-      margin-top: 12px;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 12px;
-      text-align: center;
-    }
-
-    .status.success {
-      background: #dcfce7;
-      color: #166534;
-      border: 1px solid #bbf7d0;
-    }
-
-    .status.error {
-      background: #fef2f2;
-      color: #dc2626;
-      border: 1px solid #fecaca;
-    }
-
-    .hidden {
-      display: none !important;
-      visibility: hidden !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-    }
-
-    .post-action-naming {
-      position: fixed;
+    .action-btn::before {
+      content: '';
+      position: absolute;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
+      background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.6s;
     }
 
-    .naming-dialog {
-      background: white;
-      border-radius: 12px;
-      padding: 20px;
-      width: 280px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    .action-btn:hover::before {
+      transform: translateX(100%);
     }
 
-    .naming-title {
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: #374151;
+    .action-btn:hover {
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
     }
 
-    .naming-input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 14px;
-      margin-bottom: 12px;
-      box-sizing: border-box;
+    .action-btn:active {
+      transform: translateY(-2px) scale(0.98);
     }
 
-    .naming-controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .action-btn svg {
+      width: 24px;
+      height: 24px;
+      fill: #4a5568;
+      transition: all 0.3s;
     }
 
-    .naming-btn {
-      background: #2563eb;
+    .action-btn:hover svg {
+      fill: #2d3748;
+      transform: scale(1.1);
+    }
+
+    .action-tooltip {
+      position: absolute;
+      bottom: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
       color: white;
-      border: none;
-      padding: 8px 16px;
+      padding: 6px 12px;
       border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .naming-btn:hover {
-      background: #1d4ed8;
-    }
-
-    .countdown-timer {
       font-size: 12px;
-      color: #6b7280;
       font-weight: 500;
-    }
-
-    .notes-section {
-      border-top: 1px solid #e5e7eb;
-      padding-top: 20px;
-      margin-bottom: 20px;
-    }
-
-    .notes-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .notes-title {
-      font-weight: 500;
-      color: #374151;
-    }
-
-    .notes-toggle {
-      background: none;
-      border: none;
-      font-size: 16px;
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 50%;
-      transition: all 0.2s;
-      color: #6b7280;
-    }
-
-    .notes-toggle:hover {
-      background: #f3f4f6;
-      color: #374151;
-    }
-
-    .notes-toggle.collapsed {
-      transform: rotate(180deg);
-    }
-
-    .notes-container {
-      max-height: 200px;
-      overflow: visible;
-      border-radius: 12px;
-      background: #f9fafb;
-      transition: all 0.3s ease;
-    }
-
-    .notes-container.collapsed {
-      max-height: 0;
-      overflow: hidden;
-    }
-
-    .notes-list {
-      padding: 8px;
-    }
-
-    .note-item {
-      background: white;
-      border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 8px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      transition: all 0.2s;
-    }
-
-    .note-item:last-child {
-      margin-bottom: 0;
-    }
-
-    .note-item:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    }
-
-    .note-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 8px;
-    }
-
-    .note-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .note-title {
-      font-weight: 500;
-      color: #374151;
-      font-size: 13px;
-      margin-bottom: 2px;
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s;
     }
 
-    .note-date {
-      font-size: 11px;
-      color: #6b7280;
+    .action-btn:hover .action-tooltip {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-4px);
     }
 
-    .note-actions {
-      display: flex;
-      gap: 4px;
-      margin-left: 8px;
+    .dismiss-hint {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 12px;
+      font-weight: 300;
+      opacity: 0;
+      transition: opacity 0.3s;
     }
 
-    .note-btn {
-      background: #f3f4f6;
-      border: none;
+    .floating-actions.visible ~ .dismiss-hint {
+      opacity: 1;
+    }
+
+    .status-message {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(20px);
+      padding: 12px 24px;
       border-radius: 20px;
-      padding: 6px 8px;
-      font-size: 11px;
-      cursor: pointer;
-      transition: all 0.2s;
-      color: #6b7280;
+      font-size: 14px;
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      max-width: 300px;
+      text-align: center;
     }
 
-    .note-btn:hover {
-      background: #e5e7eb;
-      color: #374151;
-      transform: scale(1.05);
+    .status-message.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-10px);
     }
 
-    .expand-btn {
-      background: #dbeafe;
-      color: #2563eb;
-    }
-
-    .expand-btn:hover {
-      background: #bfdbfe;
-    }
-
-    .copy-btn {
-      background: #dcfce7;
+    .status-message.success {
       color: #059669;
     }
 
-    .copy-btn:hover {
-      background: #bbf7d0;
+    .status-message.error {
+      color: #dc2626;
     }
 
-    .note-content {
-      max-height: 0;
+    .hidden {
+      display: none !important;
+    }
+
+    /* Subtle animation for the background */
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    body {
+      background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+    }
+
+    /* Loading state */
+    .loading {
+      position: relative;
       overflow: hidden;
-      transition: all 0.3s ease;
-      opacity: 0;
     }
 
-    .note-content.expanded {
-      max-height: 300px;
-      opacity: 1;
-      margin-top: 8px;
-      padding: 8px 12px;
-      background: #f9fafb;
-      border-radius: 8px;
-      font-size: 12px;
-      line-height: 1.4;
-      color: #374151;
-      white-space: pre-wrap;
-      word-wrap: break-word;
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      animation: loading 1.5s infinite;
     }
 
-    .empty-notes {
-      text-align: center;
-      padding: 24px 16px;
-      color: #6b7280;
-      font-size: 13px;
-    }
-
-    .empty-notes-icon {
-      font-size: 24px;
-      margin-bottom: 8px;
-      opacity: 0.5;
+    @keyframes loading {
+      0% { left: -100%; }
+      100% { left: 100%; }
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="logo">Personal Data Collector</div>
-    <div class="tagline">Easy In, Easy Out</div>
+  <input 
+    type="text" 
+    class="main-input" 
+    id="titleInput" 
+    placeholder="✨ What would you like to save today?"
+    autocomplete="off"
+    spellcheck="false"
+  >
+
+  <div class="floating-actions hidden" id="floatingActions">
+    <button class="action-btn" id="savePageBtn">
+      <svg viewBox="0 0 24 24">
+        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+      </svg>
+      <div class="action-tooltip">Save Page</div>
+    </button>
+    
+    <button class="action-btn" id="saveClipboardBtn">
+      <svg viewBox="0 0 24 24">
+        <path d="M19,3H14.82C14.4,1.84 13.3,1 12,1C10.7,1 9.6,1.84 9.18,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M12,3A1,1 0 0,1 13,4A1,1 0 0,1 12,5A1,1 0 0,1 11,4A1,1 0 0,1 12,3"/>
+      </svg>
+      <div class="action-tooltip">Save Clipboard</div>
+    </button>
   </div>
 
-  <div class="capture-section">
-    <input type="text" class="title-input" id="titleInput" placeholder="Custom title (optional)">
-    <div class="capture-buttons">
-      <button class="capture-btn" id="captureBtn">Save Page</button>
-      <button class="clipboard-btn" id="clipboardBtn">Paste</button>
-    </div>
-  </div>
+  <div class="dismiss-hint">Press Esc to dismiss</div>
 
-  <div class="stats" id="stats">
-    <div class="stats-row">
-      <span>Total Items:</span>
-      <span id="totalItems">0</span>
-    </div>
-    <div class="stats-row">
-      <span>Storage Used:</span>
-      <span id="storageUsed">0 KB</span>
-    </div>
-  </div>
-
-  <div class="notes-section">
-    <div class="notes-header" id="notesHeader">
-      <div class="notes-title">My Notes</div>
-      <button class="notes-toggle" id="notesToggle">▼</button>
-    </div>
-    <div class="notes-container" id="notesContainer">
-      <div class="notes-list" id="notesList">
-        <div class="empty-notes" id="emptyNotes">
-          <div class="empty-notes-icon">📝</div>
-          <div>No notes yet. Start capturing content!</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="export-section">
-    <div class="export-title">Export Data</div>
-    <div class="export-buttons">
-      <button class="export-btn" id="exportMd">Markdown</button>
-      <button class="export-btn" id="exportTxt">Text</button>
-      <button class="export-btn" id="exportJson">JSON</button>
-    </div>
-  </div>
-
-  <div class="status hidden" id="status"></div>
-
-  <div class="post-action-naming hidden" id="postActionNaming">
-    <div class="naming-dialog">
-      <div class="naming-title">Name this item</div>
-      <input type="text" class="naming-input" id="postActionTitle" placeholder="Enter title...">
-      <div class="naming-controls">
-        <button class="naming-btn" id="confirmNameBtn">Save</button>
-        <span class="countdown-timer" id="countdownTimer">10s</span>
-      </div>
-    </div>
-  </div>
+  <div class="status-message hidden" id="statusMessage"></div>
 
   <script src="../jszip.min.js"></script>
   <script src="popup.js"></script>
