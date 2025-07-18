@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      min-height: 400px;
+      margin: 0;
+      padding: 16px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      background: #ffffff;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2563eb;
+      margin-bottom: 4px;
+    }
+
+    .tagline {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .capture-section {
+      margin-bottom: 24px;
+    }
+
+    .capture-btn {
+      width: 100%;
+      padding: 12px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .capture-btn:hover {
+      background: #1d4ed8;
+    }
+
+    .capture-btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .title-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-bottom: 12px;
+      box-sizing: border-box;
+    }
+
+    .stats {
+      background: #f9fafb;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+
+    .stats-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .export-section {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 20px;
+    }
+
+    .export-title {
+      font-weight: 500;
+      margin-bottom: 12px;
+      color: #374151;
+    }
+
+    .export-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .export-btn {
+      padding: 8px 12px;
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .export-btn:hover {
+      background: #e5e7eb;
+      border-color: #9ca3af;
+    }
+
+    .status {
+      margin-top: 12px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .status.success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .status.error {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">Personal Data Collector</div>
+    <div class="tagline">Easy In, Easy Out</div>
+  </div>
+
+  <div class="capture-section">
+    <input type="text" class="title-input" id="titleInput" placeholder="Custom title (optional)">
+    <button class="capture-btn" id="captureBtn">Capture This Page</button>
+  </div>
+
+  <div class="stats" id="stats">
+    <div class="stats-row">
+      <span>Total Items:</span>
+      <span id="totalItems">0</span>
+    </div>
+    <div class="stats-row">
+      <span>Storage Used:</span>
+      <span id="storageUsed">0 KB</span>
+    </div>
+  </div>
+
+  <div class="export-section">
+    <div class="export-title">Export Data</div>
+    <div class="export-buttons">
+      <button class="export-btn" id="exportMd">Markdown</button>
+      <button class="export-btn" id="exportTxt">Text</button>
+      <button class="export-btn" id="exportJson">JSON</button>
+    </div>
+  </div>
+
+  <div class="status hidden" id="status"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
