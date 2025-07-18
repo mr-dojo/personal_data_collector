@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const titleInput = document.getElementById('titleInput');
-  const floatingActions = document.getElementById('floatingActions');
+  const actionPrompt = document.getElementById('actionPrompt');
   const savePageBtn = document.getElementById('savePageBtn');
   const saveClipboardBtn = document.getElementById('saveClipboardBtn');
   const exportZipBtn = document.getElementById('exportZipBtn');
@@ -10,33 +10,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Focus input on load
   titleInput.focus();
 
-  // Show floating actions when user types and presses Enter
+  // Show action prompt when user presses Enter
   titleInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      showFloatingActions();
+      const filename = titleInput.value.trim();
+      if (filename) {
+        showActionPrompt(filename);
+      } else {
+        showStatusMessage('Please enter a filename', 'error');
+      }
     } else if (e.key === 'Escape') {
-      hideFloatingActions();
+      hideActionPrompt();
     }
   });
 
-  // Hide floating actions when clicking outside or pressing Escape
+  // Hide action prompt when pressing Escape
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      hideFloatingActions();
+      hideActionPrompt();
     }
   });
 
-  function showFloatingActions() {
-    floatingActions.classList.remove('hidden');
-    floatingActions.classList.add('visible');
+  function showActionPrompt(filename) {
+    actionPrompt.classList.remove('hidden');
+    actionPrompt.classList.add('visible');
     titleInput.style.opacity = '0.3';
     titleInput.style.pointerEvents = 'none';
+    
+    // Store the filename for later use
+    actionPrompt.dataset.filename = filename;
   }
 
-  function hideFloatingActions() {
-    floatingActions.classList.remove('visible');
-    floatingActions.classList.add('hidden');
+  function hideActionPrompt() {
+    actionPrompt.classList.remove('visible');
+    actionPrompt.classList.add('hidden');
     titleInput.style.opacity = '1';
     titleInput.style.pointerEvents = 'all';
     titleInput.focus();
@@ -55,7 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   savePageBtn.addEventListener('click', async () => {
     try {
       savePageBtn.classList.add('loading');
-      const customTitle = validateInput(titleInput.value.trim(), 200);
+      const customTitle = validateInput(actionPrompt.dataset.filename || titleInput.value.trim(), 200);
       
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
@@ -76,9 +84,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           data: pageData
         });
         
-        showStatusMessage('Page saved successfully! ✨', 'success');
+        showStatusMessage('Page saved successfully!', 'success');
         titleInput.value = '';
-        hideFloatingActions();
+        hideActionPrompt();
       }
     } catch (error) {
       console.error('Capture error:', error);
@@ -92,7 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   saveClipboardBtn.addEventListener('click', async () => {
     try {
       saveClipboardBtn.classList.add('loading');
-      const customTitle = validateInput(titleInput.value.trim(), 200);
+      const customTitle = validateInput(actionPrompt.dataset.filename || titleInput.value.trim(), 200);
       
       const text = await navigator.clipboard.readText();
       
@@ -125,9 +133,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         data: clipboardData
       });
       
-      showStatusMessage('Clipboard saved successfully! 📋', 'success');
+      showStatusMessage('Clipboard saved successfully!', 'success');
       titleInput.value = '';
-      hideFloatingActions();
+      hideActionPrompt();
       
     } catch (error) {
       console.error('Clipboard error:', error);
@@ -192,8 +200,8 @@ ${item.metadata ? Object.entries(item.metadata).map(([key, value]) => `**${key}:
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      showStatusMessage(`Exported ${data.length} items as ZIP! 📦`, 'success');
-      hideFloatingActions();
+      showStatusMessage(`Exported ${data.length} items as ZIP!`, 'success');
+      hideActionPrompt();
       
     } catch (error) {
       console.error('ZIP export error:', error);
@@ -237,8 +245,8 @@ ${item.metadata ? Object.entries(item.metadata).map(([key, value]) => `**${key}:
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      showStatusMessage(`Exported ${data.length} items as JSON! 📄`, 'success');
-      hideFloatingActions();
+      showStatusMessage(`Exported ${data.length} items as JSON!`, 'success');
+      hideActionPrompt();
       
     } catch (error) {
       console.error('JSON export error:', error);
