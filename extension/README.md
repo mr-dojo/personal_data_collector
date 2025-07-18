@@ -4,7 +4,7 @@ Easy In, Easy Out - Collect your personal data with one click directly from your
 
 ## Overview
 
-The PDC Browser Extension eliminates the friction of the original Python implementation by providing:
+The PDC Browser Extension helps you collect and leverage your thoughts, things you read, things you want, meeting/call transcripts YOUR future use:
 
 - **One-click capture** directly from any webpage
 - **Zero configuration** - install and start collecting immediately  
