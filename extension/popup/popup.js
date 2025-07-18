@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   notesHeader.addEventListener('click', toggleNotes);
   
-  exportMdBtn.addEventListener('click', () => exportData('markdown'));
+  exportMdBtn.addEventListener('click', () => exportDataAsZip('markdown'));
   exportTxtBtn.addEventListener('click', () => exportData('text'));
   exportJsonBtn.addEventListener('click', () => exportData('json'));
 
@@ -165,6 +165,51 @@ document.addEventListener('DOMContentLoaded', async () => {
       storageUsed.textContent = `${kbUsed} KB`;
     } catch (error) {
       console.error('Failed to update stats:', error);
+    }
+  }
+
+  async function exportDataAsZip(format) {
+    try {
+      const result = await chrome.storage.local.get(['pdcData']);
+      const data = result.pdcData || [];
+      
+      if (data.length === 0) {
+        showStatus('No data to export', 'error');
+        return;
+      }
+
+      // Check if JSZip is available
+      if (typeof JSZip === 'undefined') {
+        console.error('JSZip library not available');
+        showStatus('ZIP library not available - using fallback', 'error');
+        exportData('markdown');
+        return;
+      }
+
+      // Create zip file with individual markdown files
+      const zip = new JSZip();
+      const folderName = 'pdc-export';
+      const folder = zip.folder(folderName);
+      
+      data.forEach((item, index) => {
+        const sanitizedTitle = sanitizeFileName(item.title || `Note_${index + 1}`);
+        const filename = `${sanitizedTitle}.md`;
+        const content = formatIndividualMarkdown(item);
+        folder.file(filename, content);
+      });
+
+      // Generate zip file
+      showStatus('Creating ZIP file...', 'success');
+      const zipContent = await zip.generateAsync({type: 'blob'});
+      const zipFilename = `pdc-export-${new Date().toISOString().slice(0, 10)}.zip`;
+      
+      downloadFile(zipContent, zipFilename, 'application/zip');
+      showStatus(`Exported ${data.length} items as ZIP with individual markdown files`, 'success');
+    } catch (error) {
+      console.error('Export error:', error);
+      showStatus('ZIP export failed - using fallback', 'error');
+      // Fallback to original export method
+      exportData('markdown');
     }
   }
 
@@ -222,9 +267,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     }).join('\n');
   }
 
+  function formatIndividualMarkdown(item) {
+    const date = new Date(item.timestamp).toLocaleDateString();
+    const time = new Date(item.timestamp).toLocaleTimeString();
+    
+    return `# ${item.title}
+
+**URL:** ${item.url}
+**Date:** ${date}
+**Time:** ${time}
+**Source:** ${item.metadata?.source || 'web'}
+
+---
+
+${item.content}
+
+---
+
+*Exported from Personal Data Collector*
+`;
+  }
+
+  function sanitizeFileName(title) {
+    if (!title || typeof title !== 'string') return 'untitled';
+    
+    return title
+      .trim()
+      .replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename characters
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/[^\w\-_.]/g, '') // Keep only alphanumeric, hyphens, underscores, and dots
+      .substring(0, 100) // Limit length to prevent filesystem issues
+      .replace(/^\.+/, '') // Remove leading dots
+      .replace(/\.+$/, '') // Remove trailing dots
+      || 'untitled'; // Fallback if everything was removed
+  }
+
   function downloadFile(content, filename, mimeType) {
     // Validate inputs
-    if (!content || typeof content !== 'string') {
+    if (!content) {
       showStatus('Invalid content for download', 'error');
       return;
     }
@@ -233,14 +313,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
     
     // Validate MIME type
-    const allowedMimeTypes = ['text/markdown', 'text/plain', 'application/json'];
+    const allowedMimeTypes = ['text/markdown', 'text/plain', 'application/json', 'application/zip'];
     if (!allowedMimeTypes.includes(mimeType)) {
       showStatus('Invalid file type', 'error');
       return;
     }
     
     try {
-      const blob = new Blob([content], { type: mimeType });
+      let blob;
+      if (content instanceof Blob) {
+        // Content is already a blob (for zip files)
+        blob = content;
+      } else if (typeof content === 'string') {
+        // Content is a string (for text files)
+        blob = new Blob([content], { type: mimeType });
+      } else {
+        showStatus('Invalid content type for download', 'error');
+        return;
+      }
+      
       const url = URL.createObjectURL(blob);
       
       const a = document.createElement('a');
