@@ -168,6 +168,184 @@
     .hidden {
       display: none;
     }
+
+    .notes-section {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .notes-title {
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .notes-toggle {
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 50%;
+      transition: all 0.2s;
+      color: #6b7280;
+    }
+
+    .notes-toggle:hover {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .notes-toggle.collapsed {
+      transform: rotate(180deg);
+    }
+
+    .notes-container {
+      max-height: 200px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      border-radius: 12px;
+      background: #f9fafb;
+      transition: all 0.3s ease;
+    }
+
+    .notes-container.collapsed {
+      max-height: 0;
+      overflow: hidden;
+    }
+
+    .notes-list {
+      padding: 8px;
+    }
+
+    .note-item {
+      background: white;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s;
+    }
+
+    .note-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .note-item:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .note-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .note-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .note-title {
+      font-weight: 500;
+      color: #374151;
+      font-size: 13px;
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .note-date {
+      font-size: 11px;
+      color: #6b7280;
+    }
+
+    .note-actions {
+      display: flex;
+      gap: 4px;
+      margin-left: 8px;
+    }
+
+    .note-btn {
+      background: #f3f4f6;
+      border: none;
+      border-radius: 20px;
+      padding: 6px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #6b7280;
+    }
+
+    .note-btn:hover {
+      background: #e5e7eb;
+      color: #374151;
+      transform: scale(1.05);
+    }
+
+    .expand-btn {
+      background: #dbeafe;
+      color: #2563eb;
+    }
+
+    .expand-btn:hover {
+      background: #bfdbfe;
+    }
+
+    .copy-btn {
+      background: #dcfce7;
+      color: #059669;
+    }
+
+    .copy-btn:hover {
+      background: #bbf7d0;
+    }
+
+    .note-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      opacity: 0;
+    }
+
+    .note-content.expanded {
+      max-height: 300px;
+      opacity: 1;
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #374151;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .empty-notes {
+      text-align: center;
+      padding: 24px 16px;
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .empty-notes-icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+      opacity: 0.5;
+    }
   </style>
 </head>
 <body>
@@ -192,6 +370,21 @@
     <div class="stats-row">
       <span>Storage Used:</span>
       <span id="storageUsed">0 KB</span>
+    </div>
+  </div>
+
+  <div class="notes-section">
+    <div class="notes-header" id="notesHeader">
+      <div class="notes-title">My Notes</div>
+      <button class="notes-toggle" id="notesToggle">▼</button>
+    </div>
+    <div class="notes-container" id="notesContainer">
+      <div class="notes-list" id="notesList">
+        <div class="empty-notes" id="emptyNotes">
+          <div class="empty-notes-icon">📝</div>
+          <div>No notes yet. Start capturing content!</div>
+        </div>
+      </div>
     </div>
   </div>
 

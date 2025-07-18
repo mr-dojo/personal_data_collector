@@ -8,8 +8,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const status = document.getElementById('status');
   const totalItems = document.getElementById('totalItems');
   const storageUsed = document.getElementById('storageUsed');
+  const notesHeader = document.getElementById('notesHeader');
+  const notesToggle = document.getElementById('notesToggle');
+  const notesContainer = document.getElementById('notesContainer');
+  const notesList = document.getElementById('notesList');
+  const emptyNotes = document.getElementById('emptyNotes');
 
   await updateStats();
+  await loadNotes();
 
   captureBtn.addEventListener('click', async () => {
     try {
@@ -39,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         showStatus('Page captured successfully!', 'success');
         titleInput.value = '';
         await updateStats();
+        await loadNotes();
       }
     } catch (error) {
       console.error('Capture error:', error);
@@ -83,6 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       titleInput.value = '';
       titleInput.focus();
       await updateStats();
+      await loadNotes();
       
     } catch (error) {
       console.error('Clipboard error:', error);
@@ -93,6 +101,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  notesHeader.addEventListener('click', toggleNotes);
+  
   exportMdBtn.addEventListener('click', () => exportData('markdown'));
   exportTxtBtn.addEventListener('click', () => exportData('text'));
   exportJsonBtn.addEventListener('click', () => exportData('json'));
@@ -201,4 +211,101 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     return Math.abs(hash).toString(36);
   }
+
+  function toggleNotes() {
+    const isCollapsed = notesContainer.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+      notesContainer.classList.remove('collapsed');
+      notesToggle.classList.remove('collapsed');
+      notesToggle.textContent = '▼';
+    } else {
+      notesContainer.classList.add('collapsed');
+      notesToggle.classList.add('collapsed');
+      notesToggle.textContent = '▶';
+    }
+  }
+
+  async function loadNotes() {
+    try {
+      const result = await chrome.storage.local.get(['pdcData']);
+      const data = result.pdcData || [];
+      
+      if (data.length === 0) {
+        emptyNotes.style.display = 'block';
+        notesList.innerHTML = '<div class="empty-notes" id="emptyNotes"><div class="empty-notes-icon">📝</div><div>No notes yet. Start capturing content!</div></div>';
+        return;
+      }
+      
+      emptyNotes.style.display = 'none';
+      notesList.innerHTML = '';
+      
+      data.forEach((note, index) => {
+        const noteElement = createNoteElement(note, index);
+        notesList.appendChild(noteElement);
+      });
+      
+    } catch (error) {
+      console.error('Failed to load notes:', error);
+    }
+  }
+
+  function createNoteElement(note, index) {
+    const noteDiv = document.createElement('div');
+    noteDiv.className = 'note-item';
+    noteDiv.dataset.index = index;
+    
+    const title = note.title.length > 50 ? note.title.substring(0, 50) + '...' : note.title;
+    const date = new Date(note.timestamp).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    noteDiv.innerHTML = `
+      <div class="note-header">
+        <div class="note-info">
+          <div class="note-title" title="${note.title}">${title}</div>
+          <div class="note-date">${date}</div>
+        </div>
+        <div class="note-actions">
+          <button class="note-btn expand-btn" onclick="toggleNoteContent(${index})">▼</button>
+          <button class="note-btn copy-btn" onclick="copyNoteContent(${index})">📋</button>
+        </div>
+      </div>
+      <div class="note-content" id="noteContent${index}">${note.content}</div>
+    `;
+    
+    return noteDiv;
+  }
+
+  window.toggleNoteContent = function(index) {
+    const content = document.getElementById(`noteContent${index}`);
+    const expandBtn = content.parentElement.querySelector('.expand-btn');
+    
+    if (content.classList.contains('expanded')) {
+      content.classList.remove('expanded');
+      expandBtn.textContent = '▼';
+    } else {
+      content.classList.add('expanded');
+      expandBtn.textContent = '▲';
+    }
+  };
+
+  window.copyNoteContent = async function(index) {
+    try {
+      const result = await chrome.storage.local.get(['pdcData']);
+      const data = result.pdcData || [];
+      const note = data[index];
+      
+      if (note) {
+        await navigator.clipboard.writeText(note.content);
+        showStatus('Note copied to clipboard!', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to copy note:', error);
+      showStatus('Failed to copy note', 'error');
+    }
+  };
 });
