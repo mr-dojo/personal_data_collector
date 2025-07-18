@@ -17,11 +17,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   await updateStats();
   await loadNotes();
   
-  // Ensure naming modal is hidden on startup
-  const namingContainer = document.getElementById('postActionNaming');
-  if (namingContainer) {
-    namingContainer.classList.add('hidden');
+  // Force hide naming modal on startup (multiple attempts to ensure it's hidden)
+  function forceHideModal() {
+    const namingContainer = document.getElementById('postActionNaming');
+    if (namingContainer) {
+      namingContainer.classList.add('hidden');
+      namingContainer.style.display = 'none';
+      console.log('Modal force hidden on startup');
+    } else {
+      console.log('Modal container not found on startup');
+    }
   }
+  
+  // Hide immediately and after a short delay
+  forceHideModal();
+  setTimeout(forceHideModal, 100);
+  setTimeout(forceHideModal, 500);
 
   captureBtn.addEventListener('click', async () => {
     try {
@@ -50,13 +61,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         showStatus('Page captured successfully!', 'success');
         const hadCustomTitle = customTitle && customTitle.length > 0;
+        console.log('Capture complete - customTitle:', customTitle, 'hadCustomTitle:', hadCustomTitle);
         titleInput.value = '';
         await updateStats();
         await loadNotes();
         
         // Start post-action naming if no custom title was provided and pageData is valid
         if (!hadCustomTitle && pageData && pageData.hash && pageData.title) {
+          console.log('Starting post-action naming for page capture');
+          modalAllowed = true; // Allow modal to show for this action
           startPostActionNaming(pageData.title, pageData.hash);
+        } else {
+          console.log('Not starting post-action naming. hadCustomTitle:', hadCustomTitle, 'pageData valid:', !!(pageData && pageData.hash && pageData.title));
         }
       }
     } catch (error) {
@@ -113,8 +129,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       // Start post-action naming if no custom title was provided and clipboardData is valid
       const hasCustomTitle = customTitle && customTitle.length > 0;
+      console.log('Clipboard complete - customTitle:', customTitle, 'hasCustomTitle:', hasCustomTitle);
       if (!hasCustomTitle && clipboardData && clipboardData.hash && clipboardData.title) {
+        console.log('Starting post-action naming for clipboard');
+        modalAllowed = true; // Allow modal to show for this action
         startPostActionNaming(clipboardData.title, clipboardData.hash);
+      } else {
+        console.log('Not starting post-action naming. hasCustomTitle:', hasCustomTitle, 'clipboardData valid:', !!(clipboardData && clipboardData.hash && clipboardData.title));
       }
       
     } catch (error) {
@@ -461,11 +482,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Global variables to track modal state
   let currentNamingTimer = null;
   let namingEventListeners = [];
+  let modalAllowed = false; // Flag to prevent modal from showing until explicitly allowed
 
   function startPostActionNaming(defaultTitle, contentId) {
     try {
       // Debug logging
       console.log('Starting post-action naming with title:', defaultTitle, 'and ID:', contentId);
+      
+      // Check if modal is allowed to show
+      if (!modalAllowed) {
+        console.log('Modal blocked - not allowed to show yet');
+        return;
+      }
       
       const namingContainer = document.getElementById('postActionNaming');
       const titleInput = document.getElementById('postActionTitle');
@@ -559,6 +587,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const namingContainer = document.getElementById('postActionNaming');
     if (namingContainer) {
       namingContainer.classList.add('hidden');
+      namingContainer.style.display = 'none';
+      console.log('Modal hidden via hideNamingModal');
     }
     
     // Clean up timer
@@ -572,6 +602,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       element.removeEventListener(event, handler);
     });
     namingEventListeners = [];
+    
+    // Reset modal permission
+    modalAllowed = false;
   }
 
   function completeNaming(finalTitle, contentId) {
