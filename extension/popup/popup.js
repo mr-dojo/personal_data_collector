@@ -1,52 +1,69 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const titleInput = document.getElementById('titleInput');
-  const actionPrompt = document.getElementById('actionPrompt');
+  const actionOverlay = document.getElementById('actionOverlay');
+  const menuIcons = document.getElementById('menuIcons');
+  const submitButton = document.getElementById('submitButton');
   const savePageBtn = document.getElementById('savePageBtn');
   const saveClipboardBtn = document.getElementById('saveClipboardBtn');
-  const exportZipBtn = document.getElementById('exportZipBtn');
-  const exportJsonBtn = document.getElementById('exportJsonBtn');
+  const notesBtn = document.getElementById('notesBtn');
+  const exportBtn = document.getElementById('exportBtn');
   const statusMessage = document.getElementById('statusMessage');
 
   // Focus input on load
   titleInput.focus();
 
-  // Show action prompt when user presses Enter
+  // Show menu icons when input is focused or has content
+  titleInput.addEventListener('focus', () => {
+    menuIcons.classList.add('visible');
+  });
+
+  titleInput.addEventListener('input', () => {
+    if (titleInput.value.trim()) {
+      menuIcons.classList.add('visible');
+    } else {
+      menuIcons.classList.remove('visible');
+    }
+  });
+
+  // Submit functionality
+  function handleSubmit() {
+    const filename = titleInput.value.trim();
+    if (filename) {
+      showActionOverlay(filename);
+    } else {
+      showStatusMessage('Please enter a filename', 'error');
+    }
+  }
+
   titleInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const filename = titleInput.value.trim();
-      if (filename) {
-        showActionPrompt(filename);
-      } else {
-        showStatusMessage('Please enter a filename', 'error');
-      }
+      handleSubmit();
     } else if (e.key === 'Escape') {
-      hideActionPrompt();
+      hideActionOverlay();
     }
   });
 
-  // Hide action prompt when pressing Escape
+  submitButton.addEventListener('click', handleSubmit);
+
+  // Hide action overlay when pressing Escape
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      hideActionPrompt();
+      hideActionOverlay();
     }
   });
 
-  function showActionPrompt(filename) {
-    actionPrompt.classList.remove('hidden');
-    actionPrompt.classList.add('visible');
-    titleInput.style.opacity = '0.3';
-    titleInput.style.pointerEvents = 'none';
+  function showActionOverlay(filename) {
+    actionOverlay.classList.remove('hidden');
+    actionOverlay.classList.add('visible');
     
     // Store the filename for later use
-    actionPrompt.dataset.filename = filename;
+    actionOverlay.dataset.filename = filename;
   }
 
-  function hideActionPrompt() {
-    actionPrompt.classList.remove('visible');
-    actionPrompt.classList.add('hidden');
-    titleInput.style.opacity = '1';
-    titleInput.style.pointerEvents = 'all';
+  function hideActionOverlay() {
+    actionOverlay.classList.remove('visible');
+    actionOverlay.classList.add('hidden');
     titleInput.focus();
   }
 
@@ -63,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   savePageBtn.addEventListener('click', async () => {
     try {
       savePageBtn.classList.add('loading');
-      const customTitle = validateInput(actionPrompt.dataset.filename || titleInput.value.trim(), 200);
+      const customTitle = validateInput(actionOverlay.dataset.filename || titleInput.value.trim(), 200);
       
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
@@ -86,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         showStatusMessage('Page saved successfully!', 'success');
         titleInput.value = '';
-        hideActionPrompt();
+        hideActionOverlay();
       }
     } catch (error) {
       console.error('Capture error:', error);
@@ -100,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   saveClipboardBtn.addEventListener('click', async () => {
     try {
       saveClipboardBtn.classList.add('loading');
-      const customTitle = validateInput(actionPrompt.dataset.filename || titleInput.value.trim(), 200);
+      const customTitle = validateInput(actionOverlay.dataset.filename || titleInput.value.trim(), 200);
       
       const text = await navigator.clipboard.readText();
       
@@ -135,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       showStatusMessage('Clipboard saved successfully!', 'success');
       titleInput.value = '';
-      hideActionPrompt();
+      hideActionOverlay();
       
     } catch (error) {
       console.error('Clipboard error:', error);
@@ -145,12 +162,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Export ZIP button functionality
-  exportZipBtn.addEventListener('click', async () => {
+  // Export functionality
+  exportBtn.addEventListener('click', async () => {
     try {
-      exportZipBtn.classList.add('loading');
-      showStatusMessage('Preparing ZIP export...', 'success');
-      
       const result = await chrome.storage.local.get(['pdcData']);
       const data = result.pdcData || [];
       
@@ -159,72 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       
-      const zip = new JSZip();
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      
-      data.forEach((item, index) => {
-        const safeTitle = sanitizeFilename(item.title || `Item-${index + 1}`);
-        const date = new Date(item.timestamp).toLocaleDateString();
-        
-        // Create markdown file
-        const markdownContent = `# ${item.title || 'Untitled'}
-
-**URL:** ${item.url || 'N/A'}  
-**Date:** ${date}  
-**Hash:** ${item.hash || 'N/A'}  
-
-## Content
-
-${item.content || 'No content available'}
-
-## Metadata
-
-${item.metadata ? Object.entries(item.metadata).map(([key, value]) => `**${key}:** ${value}`).join('  \n') : 'No metadata available'}
-`;
-        
-        // Create text file
-        const textContent = `${item.title || 'Untitled'}\n\nURL: ${item.url || 'N/A'}\nDate: ${date}\nHash: ${item.hash || 'N/A'}\n\n${item.content || 'No content available'}`;
-        
-        zip.file(`${safeTitle}.md`, markdownContent);
-        zip.file(`${safeTitle}.txt`, textContent);
-      });
-      
-      const content = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(content);
-      
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `personal-data-export-${timestamp}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      showStatusMessage(`Exported ${data.length} items as ZIP!`, 'success');
-      hideActionPrompt();
-      
-    } catch (error) {
-      console.error('ZIP export error:', error);
-      showStatusMessage('Failed to export ZIP', 'error');
-    } finally {
-      exportZipBtn.classList.remove('loading');
-    }
-  });
-
-  // Export JSON button functionality
-  exportJsonBtn.addEventListener('click', async () => {
-    try {
-      exportJsonBtn.classList.add('loading');
-      showStatusMessage('Preparing JSON export...', 'success');
-      
-      const result = await chrome.storage.local.get(['pdcData']);
-      const data = result.pdcData || [];
-      
-      if (data.length === 0) {
-        showStatusMessage('No data to export', 'error');
-        return;
-      }
-      
+      // Export as JSON by default
       const exportData = {
         exportDate: new Date().toISOString(),
         version: '1.0',
@@ -245,15 +194,17 @@ ${item.metadata ? Object.entries(item.metadata).map(([key, value]) => `**${key}:
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      showStatusMessage(`Exported ${data.length} items as JSON!`, 'success');
-      hideActionPrompt();
+      showStatusMessage(`Exported ${data.length} items!`, 'success');
       
     } catch (error) {
-      console.error('JSON export error:', error);
-      showStatusMessage('Failed to export JSON', 'error');
-    } finally {
-      exportJsonBtn.classList.remove('loading');
+      console.error('Export error:', error);
+      showStatusMessage('Failed to export', 'error');
     }
+  });
+
+  // Notes functionality placeholder
+  notesBtn.addEventListener('click', () => {
+    showStatusMessage('Notes feature coming soon!', 'success');
   });
 
   // Essential utility functions
