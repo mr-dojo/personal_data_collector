@@ -23,6 +23,11 @@
       border-radius: 20px;
       padding: 20px;
       box-sizing: border-box;
+      transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body.expanded {
+      height: 500px;
     }
 
     /* Organic background blotch */
@@ -207,11 +212,11 @@
       left: 50%;
       transform: translate(-50%, -50%) scale(0.9);
       background: #ffffff;
-      border-radius: 20px;
+      border-radius: 30px;
       padding: 40px;
       width: 320px;
       text-align: center;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     }
 
@@ -229,13 +234,14 @@
     .action-option {
       padding: 20px;
       border: none;
-      border-radius: 15px;
+      border-radius: 25px;
       font-size: 18px;
       font-weight: 700;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       text-transform: uppercase;
       letter-spacing: 1px;
+      animation: buttonFloat 6s ease-in-out infinite;
     }
 
     .save-page-btn {
@@ -313,6 +319,7 @@
       opacity: 0;
       pointer-events: none;
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
     }
 
     .menu-items.visible {
@@ -333,6 +340,8 @@
       font-weight: 600;
       letter-spacing: 0.5px;
       white-space: nowrap;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
     }
 
     .menu-item:hover {
@@ -340,42 +349,29 @@
       transform: translateY(-2px);
     }
 
-    .notes-panel {
-      position: fixed;
-      top: 0;
+    .notes-section {
+      position: absolute;
+      bottom: 0;
       left: 0;
       right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.9);
-      opacity: 0;
-      pointer-events: none;
-      transition: all 0.3s ease;
-      z-index: 2000;
-    }
-
-    .notes-panel.visible {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .notes-content {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(0.9);
       background: #2a2a2a;
       border: 2px solid #404040;
-      border-radius: 20px;
-      padding: 30px;
-      width: 90%;
-      max-width: 500px;
-      max-height: 80vh;
-      overflow-y: auto;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 25px 25px 0 0;
+      padding: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 50;
     }
 
-    .notes-panel.visible .notes-content {
-      transform: translate(-50%, -50%) scale(1);
+    .notes-section.expanded {
+      max-height: 200px;
+      padding: 20px;
+      animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .notes-section.collapsing {
+      animation: slideDown 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .notes-header {
@@ -417,10 +413,11 @@
     .note-item {
       background: #1a1a1a;
       border: 1px solid #404040;
-      border-radius: 12px;
+      border-radius: 20px;
       padding: 16px;
       margin-bottom: 12px;
-      transition: all 0.3s ease;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: noteFloat 8s ease-in-out infinite;
     }
 
     .note-item:hover {
@@ -455,11 +452,11 @@
       border: 1px solid #404040;
       background: #2a2a2a;
       color: #ffffff;
-      border-radius: 16px;
+      border-radius: 20px;
       cursor: pointer;
       font-size: 12px;
       font-weight: 500;
-      transition: all 0.3s ease;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .note-action:hover {
@@ -574,6 +571,26 @@
       50% { border-radius: 40% 60% 55% 45% / 45% 55% 65% 35%; }
       75% { border-radius: 60% 40% 45% 55% / 55% 45% 35% 65%; }
     }
+
+    @keyframes buttonFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-2px); }
+    }
+
+    @keyframes noteFloat {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-1px) scale(1.002); }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(0); opacity: 1; }
+      to { transform: translateY(100%); opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -608,23 +625,21 @@
     </button>
     <div class="menu-items" id="menuItems">
       <button class="menu-item" id="notesBtn">Notes</button>
-      <button class="menu-item" id="exportBtn">Export Notes</button>
+      <button class="menu-item" id="exportBtn">Export</button>
     </div>
   </div>
 
-  <div class="notes-panel" id="notesPanel">
-    <div class="notes-content">
-      <div class="notes-header">
-        <div class="notes-title">Your Notes</div>
-        <button class="close-notes" id="closeNotes">
-          <svg viewBox="0 0 24 24" width="16" height="16">
-            <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
-          </svg>
-        </button>
-      </div>
-      <div class="notes-list" id="notesList">
-        <div class="empty-notes">No notes yet. Create your first note!</div>
-      </div>
+  <div class="notes-section" id="notesSection">
+    <div class="notes-header">
+      <div class="notes-title">Your Notes</div>
+      <button class="close-notes" id="closeNotes">
+        <svg viewBox="0 0 24 24" width="16" height="16">
+          <path fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="notes-list" id="notesList">
+      <div class="empty-notes">No notes yet. Create your first note!</div>
     </div>
   </div>
 
@@ -632,10 +647,10 @@
     <div class="action-panel">
       <div class="action-options">
         <button class="action-option save-page-btn" id="savePageBtn">
-          Save the Page
+          Web Page
         </button>
         <button class="action-option save-clipboard-btn" id="saveClipboardBtn">
-          Save to Clipboard
+          Paste
         </button>
       </div>
     </div>

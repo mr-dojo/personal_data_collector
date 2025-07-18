@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const saveClipboardBtn = document.getElementById('saveClipboardBtn');
   const notesBtn = document.getElementById('notesBtn');
   const exportBtn = document.getElementById('exportBtn');
-  const notesPanel = document.getElementById('notesPanel');
+  const notesSection = document.getElementById('notesSection');
   const closeNotes = document.getElementById('closeNotes');
   const notesList = document.getElementById('notesList');
   const statusMessage = document.getElementById('statusMessage');
@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           data: pageData
         });
         
-        showStatusMessage('Page saved successfully!', 'success');
+        showStatusMessage('Web page saved successfully!', 'success');
         titleInput.value = '';
         hideActionOverlay();
       }
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         data: clipboardData
       });
       
-      showStatusMessage('Clipboard saved successfully!', 'success');
+      showStatusMessage('Clipboard content saved successfully!', 'success');
       titleInput.value = '';
       hideActionOverlay();
       
@@ -223,19 +223,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Notes functionality
   notesBtn.addEventListener('click', () => {
-    showNotesPanel();
+    showNotesSection();
     closeMenu();
   });
 
   closeNotes.addEventListener('click', () => {
-    hideNotesPanel();
-  });
-
-  // Click outside to close panels
-  notesPanel.addEventListener('click', (e) => {
-    if (e.target === notesPanel) {
-      hideNotesPanel();
-    }
+    hideNotesSection();
   });
 
   function closeMenu() {
@@ -243,13 +236,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     menuItems.classList.remove('visible');
   }
 
-  function showNotesPanel() {
-    notesPanel.classList.add('visible');
+  function showNotesSection() {
+    document.body.classList.add('expanded');
+    notesSection.classList.add('expanded');
     loadNotes();
   }
 
-  function hideNotesPanel() {
-    notesPanel.classList.remove('visible');
+  function hideNotesSection() {
+    notesSection.classList.add('collapsing');
+    setTimeout(() => {
+      notesSection.classList.remove('expanded', 'collapsing');
+      document.body.classList.remove('expanded');
+    }, 500);
   }
 
   async function loadNotes() {
