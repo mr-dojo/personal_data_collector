@@ -1,27 +1,44 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const titleInput = document.getElementById('titleInput');
   const actionOverlay = document.getElementById('actionOverlay');
-  const menuIcons = document.getElementById('menuIcons');
+  const menuContainer = document.getElementById('menuContainer');
+  const menuTrigger = document.getElementById('menuTrigger');
+  const menuItems = document.getElementById('menuItems');
   const submitButton = document.getElementById('submitButton');
   const savePageBtn = document.getElementById('savePageBtn');
   const saveClipboardBtn = document.getElementById('saveClipboardBtn');
   const notesBtn = document.getElementById('notesBtn');
   const exportBtn = document.getElementById('exportBtn');
+  const notesPanel = document.getElementById('notesPanel');
+  const closeNotes = document.getElementById('closeNotes');
+  const notesList = document.getElementById('notesList');
   const statusMessage = document.getElementById('statusMessage');
 
   // Focus input on load
   titleInput.focus();
 
-  // Show menu icons when input is focused or has content
+  // Show menu container when input is focused or has content
   titleInput.addEventListener('focus', () => {
-    menuIcons.classList.add('visible');
+    menuContainer.classList.add('visible');
   });
 
   titleInput.addEventListener('input', () => {
     if (titleInput.value.trim()) {
-      menuIcons.classList.add('visible');
+      menuContainer.classList.add('visible');
     } else {
-      menuIcons.classList.remove('visible');
+      menuContainer.classList.remove('visible');
+    }
+  });
+
+  // Menu trigger functionality
+  menuTrigger.addEventListener('click', () => {
+    const isExpanded = menuTrigger.classList.contains('expanded');
+    if (isExpanded) {
+      menuTrigger.classList.remove('expanded');
+      menuItems.classList.remove('visible');
+    } else {
+      menuTrigger.classList.add('expanded');
+      menuItems.classList.add('visible');
     }
   });
 
@@ -169,7 +186,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const data = result.pdcData || [];
       
       if (data.length === 0) {
-        showStatusMessage('No data to export', 'error');
+        showStatusMessage('No notes to export', 'error');
+        closeMenu();
         return;
       }
       
@@ -188,24 +206,113 @@ document.addEventListener('DOMContentLoaded', async () => {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const a = document.createElement('a');
       a.href = url;
-      a.download = `personal-data-export-${timestamp}.json`;
+      a.download = `notes-export-${timestamp}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      showStatusMessage(`Exported ${data.length} items!`, 'success');
+      showStatusMessage(`Exported ${data.length} notes!`, 'success');
+      closeMenu();
       
     } catch (error) {
       console.error('Export error:', error);
-      showStatusMessage('Failed to export', 'error');
+      showStatusMessage('Failed to export notes', 'error');
     }
   });
 
-  // Notes functionality placeholder
+  // Notes functionality
   notesBtn.addEventListener('click', () => {
-    showStatusMessage('Notes feature coming soon!', 'success');
+    showNotesPanel();
+    closeMenu();
   });
+
+  closeNotes.addEventListener('click', () => {
+    hideNotesPanel();
+  });
+
+  // Click outside to close panels
+  notesPanel.addEventListener('click', (e) => {
+    if (e.target === notesPanel) {
+      hideNotesPanel();
+    }
+  });
+
+  function closeMenu() {
+    menuTrigger.classList.remove('expanded');
+    menuItems.classList.remove('visible');
+  }
+
+  function showNotesPanel() {
+    notesPanel.classList.add('visible');
+    loadNotes();
+  }
+
+  function hideNotesPanel() {
+    notesPanel.classList.remove('visible');
+  }
+
+  async function loadNotes() {
+    try {
+      const result = await chrome.storage.local.get(['pdcData']);
+      const data = result.pdcData || [];
+      
+      if (data.length === 0) {
+        notesList.innerHTML = '<div class="empty-notes">No notes yet. Create your first note!</div>';
+        return;
+      }
+      
+      const notesHTML = data.map((note, index) => `
+        <div class="note-item" data-index="${index}">
+          <div class="note-title">${sanitizeText(note.title || 'Untitled')}</div>
+          <div class="note-content">${sanitizeText((note.content || '').substring(0, 150))}${note.content && note.content.length > 150 ? '...' : ''}</div>
+          <div class="note-actions">
+            <button class="note-action copy" onclick="copyNote(${index})">Copy</button>
+            <button class="note-action delete" onclick="deleteNote(${index})">Delete</button>
+          </div>
+        </div>
+      `).join('');
+      
+      notesList.innerHTML = notesHTML;
+    } catch (error) {
+      console.error('Error loading notes:', error);
+      notesList.innerHTML = '<div class="empty-notes">Error loading notes</div>';
+    }
+  }
+
+  // Make functions global for onclick handlers
+  window.copyNote = async (index) => {
+    try {
+      const result = await chrome.storage.local.get(['pdcData']);
+      const data = result.pdcData || [];
+      
+      if (data[index]) {
+        const noteText = `${data[index].title || 'Untitled'}\n\n${data[index].content || ''}`;
+        await navigator.clipboard.writeText(noteText);
+        showStatusMessage('Note copied to clipboard!', 'success');
+      }
+    } catch (error) {
+      console.error('Error copying note:', error);
+      showStatusMessage('Failed to copy note', 'error');
+    }
+  };
+
+  window.deleteNote = async (index) => {
+    try {
+      const result = await chrome.storage.local.get(['pdcData']);
+      const data = result.pdcData || [];
+      
+      if (data[index]) {
+        data.splice(index, 1);
+        await chrome.storage.local.set({ pdcData: data });
+        showStatusMessage('Note deleted!', 'success');
+        loadNotes(); // Refresh the notes list
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      showStatusMessage('Failed to delete note', 'error');
+    }
+  };
 
   // Essential utility functions
   async function generateHash(input) {
