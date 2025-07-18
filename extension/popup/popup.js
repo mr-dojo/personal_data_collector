@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       captureBtn.textContent = 'Capturing...';
       
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      const customTitle = titleInput.value.trim();
+      const customTitle = validateInput(titleInput.value.trim(), 200);
       
       const results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -74,13 +74,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       
-      const customTitle = titleInput.value.trim();
+      const customTitle = validateInput(titleInput.value.trim(), 200);
+      const validatedContent = validateInput(text.trim(), 100000);
+      
+      if (!validatedContent) {
+        showStatus('Invalid clipboard content', 'error');
+        return;
+      }
+      
       const clipboardData = {
         title: customTitle || generateDefaultTitle(),
         url: 'clipboard://local',
-        content: text.trim(),
+        content: validatedContent,
         timestamp: Date.now(),
-        hash: generateHash(text.trim() + 'clipboard://local'),
+        hash: await generateHash(validatedContent + 'clipboard://local'),
         metadata: {
           source: 'clipboard',
           type: 'text'
@@ -188,16 +195,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function downloadFile(content, filename, mimeType) {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
+    // Validate inputs
+    if (!content || typeof content !== 'string') {
+      showStatus('Invalid content for download', 'error');
+      return;
+    }
     
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Sanitize filename to prevent directory traversal
+    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+    
+    // Validate MIME type
+    const allowedMimeTypes = ['text/markdown', 'text/plain', 'application/json'];
+    if (!allowedMimeTypes.includes(mimeType)) {
+      showStatus('Invalid file type', 'error');
+      return;
+    }
+    
+    try {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = sanitizedFilename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      showStatus('Download failed', 'error');
+    }
   }
 
   function showStatus(message, type) {
@@ -210,22 +239,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 3000);
   }
 
-  function generateHash(input) {
-    let hash = 0;
-    if (input.length === 0) return hash.toString(36);
+  async function generateHash(input) {
+    if (!input || typeof input !== 'string') return '';
     
-    for (let i = 0; i < input.length; i++) {
-      const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+    try {
+      // Use Web Crypto API for secure hashing
+      const encoder = new TextEncoder();
+      const data = encoder.encode(input);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = new Uint8Array(hashBuffer);
+      const hashHex = Array.from(hashArray)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      
+      // Return first 12 characters for storage efficiency
+      return hashHex.substring(0, 12);
+    } catch (error) {
+      console.error('Hash generation failed:', error);
+      // Fallback to timestamp + random for uniqueness
+      return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
     }
-    
-    return Math.abs(hash).toString(36);
   }
 
   function generateDefaultTitle() {
     const now = new Date();
     return `Note - ${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+  }
+
+  function sanitizeText(text) {
+    if (!text || typeof text !== 'string') return '';
+    
+    // Remove any HTML tags and decode HTML entities
+    const tempDiv = document.createElement('div');
+    tempDiv.textContent = text;
+    const sanitized = tempDiv.innerHTML;
+    
+    // Additional sanitization: remove potentially dangerous characters
+    return sanitized
+      .replace(/[<>]/g, '') // Remove angle brackets
+      .replace(/javascript:/gi, '') // Remove javascript: URLs
+      .replace(/data:/gi, '') // Remove data: URLs
+      .replace(/vbscript:/gi, '') // Remove vbscript: URLs
+      .trim();
+  }
+
+  function validateInput(text, maxLength = 10000) {
+    if (!text || typeof text !== 'string') return '';
+    
+    // Limit length to prevent storage exhaustion
+    if (text.length > maxLength) {
+      text = text.substring(0, maxLength);
+    }
+    
+    return sanitizeText(text);
   }
 
   function toggleNotes() {
@@ -249,12 +315,34 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       if (data.length === 0) {
         emptyNotes.style.display = 'block';
-        notesList.innerHTML = '<div class="empty-notes" id="emptyNotes"><div class="empty-notes-icon">📝</div><div>No notes yet. Start capturing content!</div></div>';
+        // Clear existing notes safely
+        while (notesList.firstChild) {
+          notesList.removeChild(notesList.firstChild);
+        }
+        
+        // Create empty state elements safely
+        const emptyNotesDiv = document.createElement('div');
+        emptyNotesDiv.className = 'empty-notes';
+        emptyNotesDiv.id = 'emptyNotes';
+        
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'empty-notes-icon';
+        iconDiv.textContent = '📝';
+        
+        const textDiv = document.createElement('div');
+        textDiv.textContent = 'No notes yet. Start capturing content!';
+        
+        emptyNotesDiv.appendChild(iconDiv);
+        emptyNotesDiv.appendChild(textDiv);
+        notesList.appendChild(emptyNotesDiv);
         return;
       }
       
       emptyNotes.style.display = 'none';
-      notesList.innerHTML = '';
+      // Clear existing notes safely
+      while (notesList.firstChild) {
+        notesList.removeChild(notesList.firstChild);
+      }
       
       data.forEach((note, index) => {
         const noteElement = createNoteElement(note, index);
@@ -271,7 +359,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     noteDiv.className = 'note-item';
     noteDiv.dataset.index = index;
     
-    const title = note.title.length > 50 ? note.title.substring(0, 50) + '...' : note.title;
+    // Sanitize and validate inputs
+    const sanitizedTitle = sanitizeText(note.title || 'Untitled');
+    const sanitizedContent = sanitizeText(note.content || '');
+    const title = sanitizedTitle.length > 50 ? sanitizedTitle.substring(0, 50) + '...' : sanitizedTitle;
+    
     const date = new Date(note.timestamp).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -279,24 +371,51 @@ document.addEventListener('DOMContentLoaded', async () => {
       minute: '2-digit'
     });
     
-    noteDiv.innerHTML = `
-      <div class="note-header">
-        <div class="note-info">
-          <div class="note-title" title="${note.title}">${title}</div>
-          <div class="note-date">${date}</div>
-        </div>
-        <div class="note-actions">
-          <button class="note-btn expand-btn" data-index="${index}">▼</button>
-          <button class="note-btn copy-btn" data-index="${index}">📋</button>
-        </div>
-      </div>
-      <div class="note-content" id="noteContent${index}">${note.content}</div>
-    `;
+    // Create elements safely using DOM methods
+    const noteHeader = document.createElement('div');
+    noteHeader.className = 'note-header';
+    
+    const noteInfo = document.createElement('div');
+    noteInfo.className = 'note-info';
+    
+    const noteTitleDiv = document.createElement('div');
+    noteTitleDiv.className = 'note-title';
+    noteTitleDiv.title = sanitizedTitle;
+    noteTitleDiv.textContent = title;
+    
+    const noteDateDiv = document.createElement('div');
+    noteDateDiv.className = 'note-date';
+    noteDateDiv.textContent = date;
+    
+    const noteActions = document.createElement('div');
+    noteActions.className = 'note-actions';
+    
+    const expandBtn = document.createElement('button');
+    expandBtn.className = 'note-btn expand-btn';
+    expandBtn.dataset.index = index;
+    expandBtn.textContent = '▼';
+    
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'note-btn copy-btn';
+    copyBtn.dataset.index = index;
+    copyBtn.textContent = '📋';
+    
+    const noteContent = document.createElement('div');
+    noteContent.className = 'note-content';
+    noteContent.id = `noteContent${index}`;
+    noteContent.textContent = sanitizedContent;
+    
+    // Assemble the DOM structure
+    noteInfo.appendChild(noteTitleDiv);
+    noteInfo.appendChild(noteDateDiv);
+    noteActions.appendChild(expandBtn);
+    noteActions.appendChild(copyBtn);
+    noteHeader.appendChild(noteInfo);
+    noteHeader.appendChild(noteActions);
+    noteDiv.appendChild(noteHeader);
+    noteDiv.appendChild(noteContent);
     
     // Add event listeners for this note
-    const expandBtn = noteDiv.querySelector('.expand-btn');
-    const copyBtn = noteDiv.querySelector('.copy-btn');
-    
     expandBtn.addEventListener('click', () => toggleNoteContent(index));
     copyBtn.addEventListener('click', () => copyNoteContent(index));
     
@@ -333,63 +452,97 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function startPostActionNaming(defaultTitle, contentId) {
-    const namingContainer = document.getElementById('postActionNaming');
-    const titleInput = document.getElementById('postActionTitle');
-    const timerSpan = document.getElementById('countdownTimer');
-    const confirmBtn = document.getElementById('confirmNameBtn');
-    
-    namingContainer.classList.remove('hidden');
-    titleInput.value = defaultTitle;
-    titleInput.focus();
-    
-    let countdown = 10;
-    timerSpan.textContent = `${countdown}s`;
-    
-    const timer = setInterval(() => {
-      countdown--;
+    try {
+      const namingContainer = document.getElementById('postActionNaming');
+      const titleInput = document.getElementById('postActionTitle');
+      const timerSpan = document.getElementById('countdownTimer');
+      const confirmBtn = document.getElementById('confirmNameBtn');
+      
+      if (!namingContainer || !titleInput || !timerSpan || !confirmBtn) {
+        console.error('Required DOM elements not found for post-action naming');
+        return;
+      }
+      
+      namingContainer.classList.remove('hidden');
+      titleInput.value = sanitizeText(defaultTitle) || '';
+      titleInput.focus();
+      
+      let countdown = 10;
       timerSpan.textContent = `${countdown}s`;
       
-      if (countdown <= 0) {
+      const timer = setInterval(() => {
+        countdown--;
+        timerSpan.textContent = `${countdown}s`;
+        
+        if (countdown <= 0) {
+          clearInterval(timer);
+          completeNaming(titleInput.value, contentId);
+        }
+      }, 1000);
+      
+      const stopTimer = () => {
+        clearInterval(timer);
+        timerSpan.textContent = 'Press Enter';
+      };
+      
+      titleInput.addEventListener('input', stopTimer, { once: true });
+      
+      titleInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          clearInterval(timer);
+          completeNaming(titleInput.value, contentId);
+        }
+      });
+      
+      confirmBtn.addEventListener('click', () => {
         clearInterval(timer);
         completeNaming(titleInput.value, contentId);
-      }
-    }, 1000);
-    
-    const stopTimer = () => {
-      clearInterval(timer);
-      timerSpan.textContent = 'Press Enter';
-    };
-    
-    titleInput.addEventListener('input', stopTimer, { once: true });
-    
-    titleInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        clearInterval(timer);
-        completeNaming(titleInput.value, contentId);
-      }
-    });
-    
-    confirmBtn.addEventListener('click', () => {
-      clearInterval(timer);
-      completeNaming(titleInput.value, contentId);
-    });
+      });
+    } catch (error) {
+      console.error('Error in post-action naming:', error);
+      showStatus('Naming feature unavailable', 'error');
+    }
   }
 
   function completeNaming(finalTitle, contentId) {
-    chrome.storage.local.get(['pdcData'], (result) => {
-      const data = result.pdcData || [];
-      const itemIndex = data.findIndex(item => item.hash === contentId);
-      
-      if (itemIndex !== -1) {
-        data[itemIndex].title = finalTitle || generateDefaultTitle();
-        chrome.storage.local.set({pdcData: data});
-        
-        document.getElementById('postActionNaming').classList.add('hidden');
-        updateStats();
-        loadNotes();
-        showStatus('Title updated!', 'success');
-      }
-    });
+    try {
+      chrome.storage.local.get(['pdcData'], (result) => {
+        try {
+          const data = result.pdcData || [];
+          const itemIndex = data.findIndex(item => item.hash === contentId);
+          
+          if (itemIndex !== -1) {
+            const validatedTitle = validateInput(finalTitle, 200) || generateDefaultTitle();
+            data[itemIndex].title = validatedTitle;
+            
+            chrome.storage.local.set({pdcData: data}, () => {
+              if (chrome.runtime.lastError) {
+                console.error('Storage error:', chrome.runtime.lastError);
+                showStatus('Failed to update title', 'error');
+                return;
+              }
+              
+              const namingContainer = document.getElementById('postActionNaming');
+              if (namingContainer) {
+                namingContainer.classList.add('hidden');
+              }
+              
+              updateStats();
+              loadNotes();
+              showStatus('Title updated!', 'success');
+            });
+          } else {
+            showStatus('Item not found', 'error');
+          }
+        } catch (error) {
+          console.error('Error processing naming completion:', error);
+          showStatus('Failed to update title', 'error');
+        }
+      });
+    } catch (error) {
+      console.error('Error in complete naming:', error);
+      showStatus('Naming update failed', 'error');
+    }
   }
 
 });

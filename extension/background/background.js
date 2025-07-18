@@ -18,7 +18,6 @@ async function storeContent(newContent) {
     const isDuplicate = data.some(item => item.hash === newContent.hash);
     
     if (isDuplicate) {
-      console.log('Duplicate content detected, skipping storage');
       return { success: true, duplicate: true };
     }
     
@@ -31,7 +30,6 @@ async function storeContent(newContent) {
     
     await chrome.storage.local.set({ pdcData: data });
     
-    console.log('Content stored successfully:', newContent.title);
     return { success: true, duplicate: false };
     
   } catch (error) {
@@ -42,10 +40,8 @@ async function storeContent(newContent) {
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
-    console.log('PDC Extension installed');
     initializeStorage();
   } else if (details.reason === 'update') {
-    console.log('PDC Extension updated');
     migrateData();
   }
 });
@@ -55,7 +51,6 @@ async function initializeStorage() {
     const result = await chrome.storage.local.get(['pdcData']);
     if (!result.pdcData) {
       await chrome.storage.local.set({ pdcData: [] });
-      console.log('Storage initialized');
     }
   } catch (error) {
     console.error('Failed to initialize storage:', error);
@@ -69,9 +64,9 @@ async function migrateData() {
     
     let migrated = false;
     
-    const updatedData = data.map(item => {
+    const updatedData = await Promise.all(data.map(async (item) => {
       if (!item.hash) {
-        item.hash = generateHash((item.content || '') + (item.url || ''));
+        item.hash = await generateHash((item.content || '') + (item.url || ''));
         migrated = true;
       }
       
@@ -81,35 +76,41 @@ async function migrateData() {
       }
       
       return item;
-    });
+    }));
     
     if (migrated) {
       await chrome.storage.local.set({ pdcData: updatedData });
-      console.log('Data migration completed');
     }
   } catch (error) {
     console.error('Failed to migrate data:', error);
   }
 }
 
-function generateHash(input) {
-  let hash = 0;
-  if (input.length === 0) return hash.toString(36);
+async function generateHash(input) {
+  if (!input || typeof input !== 'string') return '';
   
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+  try {
+    // Use Web Crypto API for secure hashing
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = new Uint8Array(hashBuffer);
+    const hashHex = Array.from(hashArray)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    // Return first 12 characters for storage efficiency
+    return hashHex.substring(0, 12);
+  } catch (error) {
+    console.error('Hash generation failed:', error);
+    // Fallback to timestamp + random for uniqueness
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
   }
-  
-  return Math.abs(hash).toString(36);
 }
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
-  if (namespace === 'local' && changes.pdcData) {
-    const newData = changes.pdcData.newValue || [];
-    console.log(`Storage updated: ${newData.length} items stored`);
-  }
+  // Storage monitoring for future debugging if needed
+  // Removed verbose logging for production security
 });
 
 chrome.action.onClicked.addListener((tab) => {

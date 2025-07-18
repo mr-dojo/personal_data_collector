@@ -1,12 +1,17 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'extractContent') {
-    const content = extractPageContent(request.customTitle);
-    sendResponse(content);
+    extractPageContent(request.customTitle).then(content => {
+      sendResponse(content);
+    }).catch(error => {
+      console.error('Content extraction failed:', error);
+      sendResponse({ error: 'Failed to extract content' });
+    });
+    return true; // Keep the message channel open for async response
   }
   return true;
 });
 
-function extractPageContent(customTitle = '') {
+async function extractPageContent(customTitle = '') {
   const title = customTitle || extractTitle() || generateDefaultTitle();
   const url = window.location.href;
   const content = extractMainContent();
@@ -18,7 +23,7 @@ function extractPageContent(customTitle = '') {
     content,
     metadata,
     timestamp: Date.now(),
-    hash: generateHash(content + url)
+    hash: await generateHash(content + url)
   };
 }
 
@@ -157,24 +162,40 @@ function extractMetadata() {
 }
 
 function cleanContent(text) {
-  if (!text) return '';
+  if (!text || typeof text !== 'string') return '';
   
-  return text
-    .replace(/\s+/g, ' ')
-    .replace(/\n\s*\n\s*\n/g, '\n\n')
-    .replace(/^\s+|\s+$/g, '')
-    .substring(0, 100000);
+  try {
+    return text
+      .replace(/\s+/g, ' ')
+      .replace(/\n\s*\n\s*\n/g, '\n\n')
+      .replace(/^\s+|\s+$/g, '')
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '') // Remove style tags
+      .substring(0, 100000);
+  } catch (error) {
+    console.error('Content cleaning failed:', error);
+    return text.substring(0, 100000);
+  }
 }
 
-function generateHash(input) {
-  let hash = 0;
-  if (input.length === 0) return hash.toString(36);
+async function generateHash(input) {
+  if (!input || typeof input !== 'string') return '';
   
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+  try {
+    // Use Web Crypto API for secure hashing
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = new Uint8Array(hashBuffer);
+    const hashHex = Array.from(hashArray)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    // Return first 12 characters for storage efficiency
+    return hashHex.substring(0, 12);
+  } catch (error) {
+    console.error('Hash generation failed:', error);
+    // Fallback to timestamp + random for uniqueness
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
   }
-  
-  return Math.abs(hash).toString(36);
 }
