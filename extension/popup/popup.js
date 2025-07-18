@@ -286,17 +286,24 @@ document.addEventListener('DOMContentLoaded', async () => {
           <div class="note-date">${date}</div>
         </div>
         <div class="note-actions">
-          <button class="note-btn expand-btn" onclick="toggleNoteContent(${index})">▼</button>
-          <button class="note-btn copy-btn" onclick="copyNoteContent(${index})">📋</button>
+          <button class="note-btn expand-btn" data-index="${index}">▼</button>
+          <button class="note-btn copy-btn" data-index="${index}">📋</button>
         </div>
       </div>
       <div class="note-content" id="noteContent${index}">${note.content}</div>
     `;
     
+    // Add event listeners for this note
+    const expandBtn = noteDiv.querySelector('.expand-btn');
+    const copyBtn = noteDiv.querySelector('.copy-btn');
+    
+    expandBtn.addEventListener('click', () => toggleNoteContent(index));
+    copyBtn.addEventListener('click', () => copyNoteContent(index));
+    
     return noteDiv;
   }
 
-  window.toggleNoteContent = function(index) {
+  function toggleNoteContent(index) {
     const content = document.getElementById(`noteContent${index}`);
     const expandBtn = content.parentElement.querySelector('.expand-btn');
     
@@ -307,9 +314,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       content.classList.add('expanded');
       expandBtn.textContent = '▲';
     }
-  };
+  }
 
-  window.copyNoteContent = async function(index) {
+  async function copyNoteContent(index) {
     try {
       const result = await chrome.storage.local.get(['pdcData']);
       const data = result.pdcData || [];
@@ -323,7 +330,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Failed to copy note:', error);
       showStatus('Failed to copy note', 'error');
     }
-  };
+  }
 
   function startPostActionNaming(defaultTitle, contentId) {
     const namingContainer = document.getElementById('postActionNaming');
@@ -385,5 +392,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  window.startPostActionNaming = startPostActionNaming;
 });
