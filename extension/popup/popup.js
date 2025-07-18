@@ -43,16 +43,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         
         showStatus('Page captured successfully!', 'success');
+        const hadCustomTitle = customTitle.length > 0;
         titleInput.value = '';
         await updateStats();
         await loadNotes();
+        
+        // Start post-action naming if no custom title was provided
+        if (!hadCustomTitle) {
+          startPostActionNaming(pageData.title, pageData.hash);
+        }
       }
     } catch (error) {
       console.error('Capture error:', error);
       showStatus('Failed to capture page', 'error');
     } finally {
       captureBtn.disabled = false;
-      captureBtn.textContent = 'Capture This Page';
+      captureBtn.textContent = 'Save Page';
     }
   });
 
@@ -70,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       const customTitle = titleInput.value.trim();
       const clipboardData = {
-        title: customTitle || 'Clipboard Content',
+        title: customTitle || generateDefaultTitle(),
         url: 'clipboard://local',
         content: text.trim(),
         timestamp: Date.now(),
@@ -92,12 +98,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       await updateStats();
       await loadNotes();
       
+      // Start post-action naming if no custom title was provided
+      if (!customTitle) {
+        startPostActionNaming(clipboardData.title, clipboardData.hash);
+      }
+      
     } catch (error) {
       console.error('Clipboard error:', error);
       showStatus('Failed to read clipboard', 'error');
     } finally {
       clipboardBtn.disabled = false;
-      clipboardBtn.textContent = '📋 From Clipboard';
+      clipboardBtn.textContent = 'Paste';
     }
   });
 
@@ -212,6 +223,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     return Math.abs(hash).toString(36);
   }
 
+  function generateDefaultTitle() {
+    const now = new Date();
+    return `Note - ${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+  }
+
   function toggleNotes() {
     const isCollapsed = notesContainer.classList.contains('collapsed');
     
@@ -308,4 +324,66 @@ document.addEventListener('DOMContentLoaded', async () => {
       showStatus('Failed to copy note', 'error');
     }
   };
+
+  function startPostActionNaming(defaultTitle, contentId) {
+    const namingContainer = document.getElementById('postActionNaming');
+    const titleInput = document.getElementById('postActionTitle');
+    const timerSpan = document.getElementById('countdownTimer');
+    const confirmBtn = document.getElementById('confirmNameBtn');
+    
+    namingContainer.classList.remove('hidden');
+    titleInput.value = defaultTitle;
+    titleInput.focus();
+    
+    let countdown = 10;
+    timerSpan.textContent = `${countdown}s`;
+    
+    const timer = setInterval(() => {
+      countdown--;
+      timerSpan.textContent = `${countdown}s`;
+      
+      if (countdown <= 0) {
+        clearInterval(timer);
+        completeNaming(titleInput.value, contentId);
+      }
+    }, 1000);
+    
+    const stopTimer = () => {
+      clearInterval(timer);
+      timerSpan.textContent = 'Press Enter';
+    };
+    
+    titleInput.addEventListener('input', stopTimer, { once: true });
+    
+    titleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        clearInterval(timer);
+        completeNaming(titleInput.value, contentId);
+      }
+    });
+    
+    confirmBtn.addEventListener('click', () => {
+      clearInterval(timer);
+      completeNaming(titleInput.value, contentId);
+    });
+  }
+
+  function completeNaming(finalTitle, contentId) {
+    chrome.storage.local.get(['pdcData'], (result) => {
+      const data = result.pdcData || [];
+      const itemIndex = data.findIndex(item => item.hash === contentId);
+      
+      if (itemIndex !== -1) {
+        data[itemIndex].title = finalTitle || generateDefaultTitle();
+        chrome.storage.local.set({pdcData: data});
+        
+        document.getElementById('postActionNaming').classList.add('hidden');
+        updateStats();
+        loadNotes();
+        showStatus('Title updated!', 'success');
+      }
+    });
+  }
+
+  window.startPostActionNaming = startPostActionNaming;
 });

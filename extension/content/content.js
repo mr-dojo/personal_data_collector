@@ -7,7 +7,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 function extractPageContent(customTitle = '') {
-  const title = customTitle || extractTitle();
+  const title = customTitle || extractTitle() || generateDefaultTitle();
   const url = window.location.href;
   const content = extractMainContent();
   const metadata = extractMetadata();
@@ -20,6 +20,11 @@ function extractPageContent(customTitle = '') {
     timestamp: Date.now(),
     hash: generateHash(content + url)
   };
+}
+
+function generateDefaultTitle() {
+  const now = new Date();
+  return `Note - ${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
 }
 
 function extractTitle() {

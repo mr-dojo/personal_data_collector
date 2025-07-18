@@ -5,12 +5,13 @@
   <style>
     body {
       width: 350px;
-      min-height: 400px;
+      max-height: 600px;
       margin: 0;
       padding: 16px;
       font-family: system-ui, -apple-system, sans-serif;
       font-size: 14px;
       background: #ffffff;
+      overflow-y: auto;
     }
 
     .header {
@@ -51,23 +52,30 @@
     }
 
     .capture-btn {
-      background: #2563eb;
-      color: white;
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
     }
 
     .capture-btn:hover {
-      background: #1d4ed8;
+      background: #e5e7eb;
       transform: translateY(-1px);
     }
 
     .clipboard-btn {
-      background: #10b981;
+      background: #2563eb;
       color: white;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 24px;
+      box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
     }
 
     .clipboard-btn:hover {
-      background: #059669;
+      background: #1d4ed8;
       transform: translateY(-1px);
+      box-shadow: 0 6px 8px rgba(37, 99, 235, 0.25);
     }
 
     .capture-btn:disabled, .clipboard-btn:disabled {
@@ -169,6 +177,69 @@
       display: none;
     }
 
+    .post-action-naming {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .naming-dialog {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      width: 280px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .naming-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #374151;
+    }
+
+    .naming-input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 12px;
+      box-sizing: border-box;
+    }
+
+    .naming-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .naming-btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .naming-btn:hover {
+      background: #1d4ed8;
+    }
+
+    .countdown-timer {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
     .notes-section {
       border-top: 1px solid #e5e7eb;
       padding-top: 20px;
@@ -211,8 +282,7 @@
 
     .notes-container {
       max-height: 200px;
-      overflow-y: auto;
-      overflow-x: hidden;
+      overflow: visible;
       border-radius: 12px;
       background: #f9fafb;
       transition: all 0.3s ease;
@@ -357,8 +427,8 @@
   <div class="capture-section">
     <input type="text" class="title-input" id="titleInput" placeholder="Custom title (optional)">
     <div class="capture-buttons">
-      <button class="capture-btn" id="captureBtn">Capture This Page</button>
-      <button class="clipboard-btn" id="clipboardBtn">📋 From Clipboard</button>
+      <button class="capture-btn" id="captureBtn">Save Page</button>
+      <button class="clipboard-btn" id="clipboardBtn">Paste</button>
     </div>
   </div>
 
@@ -398,6 +468,17 @@
   </div>
 
   <div class="status hidden" id="status"></div>
+
+  <div class="post-action-naming hidden" id="postActionNaming">
+    <div class="naming-dialog">
+      <div class="naming-title">Name this item</div>
+      <input type="text" class="naming-input" id="postActionTitle" placeholder="Enter title...">
+      <div class="naming-controls">
+        <button class="naming-btn" id="confirmNameBtn">Save</button>
+        <span class="countdown-timer" id="countdownTimer">10s</span>
+      </div>
+    </div>
+  </div>
 
   <script src="popup.js"></script>
 </body>
