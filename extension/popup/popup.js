@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const floatingActions = document.getElementById('floatingActions');
   const savePageBtn = document.getElementById('savePageBtn');
   const saveClipboardBtn = document.getElementById('saveClipboardBtn');
+  const exportZipBtn = document.getElementById('exportZipBtn');
+  const exportJsonBtn = document.getElementById('exportJsonBtn');
   const statusMessage = document.getElementById('statusMessage');
 
   // Focus input on load
@@ -135,6 +137,117 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // Export ZIP button functionality
+  exportZipBtn.addEventListener('click', async () => {
+    try {
+      exportZipBtn.classList.add('loading');
+      showStatusMessage('Preparing ZIP export...', 'success');
+      
+      const result = await chrome.storage.local.get(['pdcData']);
+      const data = result.pdcData || [];
+      
+      if (data.length === 0) {
+        showStatusMessage('No data to export', 'error');
+        return;
+      }
+      
+      const zip = new JSZip();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      
+      data.forEach((item, index) => {
+        const safeTitle = sanitizeFilename(item.title || `Item-${index + 1}`);
+        const date = new Date(item.timestamp).toLocaleDateString();
+        
+        // Create markdown file
+        const markdownContent = `# ${item.title || 'Untitled'}
+
+**URL:** ${item.url || 'N/A'}  
+**Date:** ${date}  
+**Hash:** ${item.hash || 'N/A'}  
+
+## Content
+
+${item.content || 'No content available'}
+
+## Metadata
+
+${item.metadata ? Object.entries(item.metadata).map(([key, value]) => `**${key}:** ${value}`).join('  \n') : 'No metadata available'}
+`;
+        
+        // Create text file
+        const textContent = `${item.title || 'Untitled'}\n\nURL: ${item.url || 'N/A'}\nDate: ${date}\nHash: ${item.hash || 'N/A'}\n\n${item.content || 'No content available'}`;
+        
+        zip.file(`${safeTitle}.md`, markdownContent);
+        zip.file(`${safeTitle}.txt`, textContent);
+      });
+      
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `personal-data-export-${timestamp}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showStatusMessage(`Exported ${data.length} items as ZIP! 📦`, 'success');
+      hideFloatingActions();
+      
+    } catch (error) {
+      console.error('ZIP export error:', error);
+      showStatusMessage('Failed to export ZIP', 'error');
+    } finally {
+      exportZipBtn.classList.remove('loading');
+    }
+  });
+
+  // Export JSON button functionality
+  exportJsonBtn.addEventListener('click', async () => {
+    try {
+      exportJsonBtn.classList.add('loading');
+      showStatusMessage('Preparing JSON export...', 'success');
+      
+      const result = await chrome.storage.local.get(['pdcData']);
+      const data = result.pdcData || [];
+      
+      if (data.length === 0) {
+        showStatusMessage('No data to export', 'error');
+        return;
+      }
+      
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        version: '1.0',
+        itemCount: data.length,
+        items: data
+      };
+      
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `personal-data-export-${timestamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showStatusMessage(`Exported ${data.length} items as JSON! 📄`, 'success');
+      hideFloatingActions();
+      
+    } catch (error) {
+      console.error('JSON export error:', error);
+      showStatusMessage('Failed to export JSON', 'error');
+    } finally {
+      exportJsonBtn.classList.remove('loading');
+    }
+  });
+
   // Essential utility functions
   async function generateHash(input) {
     if (!input || typeof input !== 'string') return '';
@@ -183,6 +296,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       .replace(/data:/gi, '')
       .replace(/vbscript:/gi, '')
       .trim();
+  }
+
+  function sanitizeFilename(filename) {
+    if (!filename || typeof filename !== 'string') return 'untitled';
+    
+    return filename
+      .replace(/[<>:"/\\|?*]/g, '_')
+      .replace(/\s+/g, '_')
+      .replace(/_{2,}/g, '_')
+      .replace(/^_|_$/g, '')
+      .substring(0, 100)
+      .toLowerCase() || 'untitled';
   }
 
 });
