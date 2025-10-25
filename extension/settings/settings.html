@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDC Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Personal Data Collector Settings</h1>
+      <p class="subtitle">Configure your Notion integration</p>
+    </header>
+
+    <form id="settingsForm">
+      <div class="form-group">
+        <label for="apiKey">Notion Integration Token</label>
+        <input
+          type="password"
+          id="apiKey"
+          placeholder="secret_xxxxxxxxxxxxx..."
+          required
+        >
+        <small class="help-text">
+          Create an integration at
+          <a href="https://www.notion.so/my-integrations" target="_blank">notion.so/my-integrations</a>
+        </small>
+      </div>
+
+      <div class="form-group">
+        <label for="databaseId">Database ID</label>
+        <input
+          type="text"
+          id="databaseId"
+          placeholder="abc123def456..."
+          required
+        >
+        <small class="help-text">
+          Find this in your Notion database URL after the workspace name
+        </small>
+      </div>
+
+      <div class="button-group">
+        <button type="submit" class="btn-primary">Save Settings</button>
+        <button type="button" id="testBtn" class="btn-secondary">Test Connection</button>
+      </div>
+
+      <div id="status" class="status hidden"></div>
+    </form>
+
+    <footer>
+      <details>
+        <summary>How to set up Notion integration</summary>
+        <ol>
+          <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank">notion.so/my-integrations</a></li>
+          <li>Click "+ New integration"</li>
+          <li>Name it "PDC Browser Extension"</li>
+          <li>Copy the "Internal Integration Token"</li>
+          <li>Open your PDC database in Notion</li>
+          <li>Click "..." → "Add connections" → Select your integration</li>
+          <li>Copy the database ID from the URL</li>
+        </ol>
+      </details>
+    </footer>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>

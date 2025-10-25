@@ -1,143 +1,117 @@
-# Personal Data Collector - Browser Extension
+# Personal Data Collector - Chrome Extension
 
-Easy In, Easy Out - Collect your personal data with one click directly from your browser.
+Dead-simple browser extension that saves clipboard content directly to your Notion PDC database for enrichment.
 
-## Overview
+## Features
 
-The PDC Browser Extension helps you collect and leverage your thoughts, things you read, things you want, meeting/call transcripts YOUR future use:
+- **One-click save**: Copy text → Click extension → Saved to Notion
+- **Secure storage**: API credentials encrypted in Chrome's local storage
+- **Auto-enrichment**: Your n8n workflow picks up and enriches the content
+- **Zero complexity**: No backend needed - just extension → Notion API
 
-- **One-click capture** directly from any webpage
-- **Zero configuration** - install and start collecting immediately  
-- **Local storage** - your data stays in your browser, under your control
-- **Instant export** - get your data in Markdown, Text, or JSON format
-- **Smart deduplication** - automatically prevents saving the same content twice
+## Setup Instructions
 
-## Installation
+### 1. Create Notion Integration
 
-### From Source (Developer Mode)
+1. Go to https://www.notion.so/my-integrations
+2. Click **"+ New integration"**
+3. Name: `PDC Browser Extension`
+4. Select your workspace
+5. Capabilities: Read, Update, Insert content
+6. Copy the **Internal Integration Token** (starts with `secret_`)
 
-1. Clone this repository
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right
-4. Click "Load unpacked" and select the `extension` folder
-5. The PDC icon should appear in your toolbar
+### 2. Connect Integration to Database
 
-### From Chrome Web Store (Coming Soon)
+1. Open your PDC database in Notion
+2. Click the **"..."** menu (top right)
+3. Click **"Add connections"**
+4. Select **"PDC Browser Extension"**
 
-The extension will be available on the Chrome Web Store once the initial release is complete.
+### 3. Get Database ID
+
+Your database URL looks like:
+```
+https://notion.so/workspace/abc123def456?v=...
+                          ^^^^^^^^^^^^
+                          This is your Database ID
+```
+
+Copy the ID between the last `/` and the `?`
+
+### 4. Install Extension
+
+1. Open Chrome and go to `chrome://extensions`
+2. Enable **Developer mode** (top right toggle)
+3. Click **"Load unpacked"**
+4. Select this `extension` folder
+5. Extension should now appear in your toolbar
+
+### 5. Configure Extension
+
+1. Click the PDC extension icon
+2. You'll see "Setup Required"
+3. Click **"Open Settings"**
+4. Paste your **API Token** and **Database ID**
+5. Click **"Test Connection"** to verify
+6. Click **"Save Settings"**
 
 ## Usage
 
-### Capturing Content
+1. Copy any text (Cmd+C / Ctrl+C)
+2. Click the PDC extension icon
+3. Click **"Save Clipboard to PDC"**
+4. Done! ✓ Your n8n workflow will enrich it in ~60 seconds
 
-1. Navigate to any webpage you want to save
-2. Click the PDC extension icon in your toolbar
-3. (Optional) Add a custom title in the text field
-4. Click "Capture This Page"
-5. The page content is instantly saved to local storage
+## Requirements
 
-### Viewing Your Data
+Your Notion database must have a **Content** property (type: Rich Text).
 
-The popup shows your collection statistics:
-- Total number of captured items
-- Storage space used
-- Real-time updates as you capture content
+That's the only required field - your n8n enrichment workflow handles all other properties (Title, Summary, Key Points, etc.)
 
-### Exporting Your Data
+## Troubleshooting
 
-Click any export button to download your entire collection:
+**"Invalid API key" error**
+- Check that your token starts with `secret_`
+- Verify the integration is connected to your database in Notion
 
-- **Markdown** - Perfect for AI tools like Claude or ChatGPT
-- **Text** - Human-readable format for notes and research
-- **JSON** - Programmatic access for custom tools
+**"Database not found" error**
+- Double-check the Database ID from your URL
+- Make sure the integration has access to the database
 
-## Technical Details
+**"Clipboard is empty" error**
+- Copy some text first before clicking save
 
-### Architecture
-
-- **Manifest V3** compatible for future-proofing
-- **Content Script** extracts clean content from web pages
-- **Background Script** handles storage and deduplication
-- **Popup Interface** provides user controls and export functions
-
-### Storage
-
-- Uses Chrome's `storage.local` API for persistence
-- Content is automatically deduplicated using content hashes
-- No external servers or cloud dependencies
-- Maximum 1000 items stored (oldest removed automatically)
-
-### Content Extraction
-
-The extension intelligently extracts content using:
-
-1. Semantic HTML elements (`<article>`, `<main>`, etc.)
-2. Common content class names (`.content`, `.post-content`, etc.)
-3. Paragraph clustering for sites without semantic markup
-4. Metadata extraction (title, description, publish date)
-
-### Permissions
-
-- `activeTab` - Access the current tab for content extraction
-- `storage` - Save captured content locally
+**Extension doesn't appear after installing**
+- Refresh the extensions page (`chrome://extensions`)
+- Make sure Developer mode is enabled
 
 ## File Structure
 
 ```
 extension/
-├── manifest.json          # Extension configuration
+├── manifest.json        # Extension configuration
 ├── popup/
-│   ├── popup.html        # User interface
-│   └── popup.js          # UI logic and export functions
-├── content/
-│   └── content.js        # Page content extraction
-├── background/
-│   └── background.js     # Storage and background processing
-└── icons/
-    └── *.png            # Extension icons (16, 32, 48, 128px)
+│   ├── popup.html       # Main popup UI
+│   ├── popup.css        # Popup styling
+│   └── popup.js         # Save logic + Notion API
+├── settings/
+│   ├── settings.html    # Settings page UI
+│   ├── settings.css     # Settings styling
+│   └── settings.js      # Credential storage + validation
+└── icons/               # Extension icons
 ```
 
-## Development
+## Security
 
-### Local Development
+- API credentials are stored in Chrome's encrypted `storage.local`
+- Only your extension can access the stored credentials
+- Credentials never leave your machine except in HTTPS requests to Notion
+- Follow least-privilege: scope integration to only your PDC database
 
-1. Make changes to the source files
-2. Go to `chrome://extensions/`
-3. Click the refresh icon on the PDC extension card
-4. Test your changes
+## Version
 
-### Building for Production
+**v2.0.0** - Simplified Notion-first architecture
 
-The extension is built with vanilla JavaScript, HTML, and CSS - no build process required.
+---
 
-Before publishing:
-1. Replace placeholder icons with proper PNG files
-2. Update version in `manifest.json`
-3. Test on multiple websites and browsers
-
-## Compatibility
-
-- **Chrome** 88+ (Manifest V3 support)
-- **Edge** 88+
-- **Brave** (Chromium-based versions)
-- **Other Chromium browsers** with Manifest V3 support
-
-## Privacy & Security
-
-- All data stays local in your browser
-- No network requests or external dependencies
-- No user tracking or analytics
-- Open source for complete transparency
-
-## Contributing
-
-This extension follows the same "Easy In, Easy Out" philosophy as the original PDC:
-
-- Keep the codebase simple and readable
-- Minimize dependencies and complexity
-- Prioritize user control and data ownership
-- Maintain backward compatibility when possible
-
-## License
-
-MIT - Your data, your rules.
+Built with ❤️ for data sovereignty

@@ -1,377 +1,191 @@
-document.addEventListener('DOMContentLoaded', async () => {
-  const titleInput = document.getElementById('titleInput');
-  const actionOverlay = document.getElementById('actionOverlay');
-  const menuContainer = document.getElementById('menuContainer');
-  const menuTrigger = document.getElementById('menuTrigger');
-  const menuItems = document.getElementById('menuItems');
-  const submitButton = document.getElementById('submitButton');
-  const savePageBtn = document.getElementById('savePageBtn');
-  const saveClipboardBtn = document.getElementById('saveClipboardBtn');
-  const notesBtn = document.getElementById('notesBtn');
-  const exportBtn = document.getElementById('exportBtn');
-  const notesSection = document.getElementById('notesSection');
-  const closeNotes = document.getElementById('closeNotes');
-  const notesList = document.getElementById('notesList');
-  const statusMessage = document.getElementById('statusMessage');
+// DOM elements
+const setupRequired = document.getElementById('setupRequired');
+const mainInterface = document.getElementById('mainInterface');
+const loading = document.getElementById('loading');
+const saveBtn = document.getElementById('saveBtn');
+const openSettings = document.getElementById('openSettings');
+const settingsIcon = document.getElementById('settingsIcon');
+const statusDiv = document.getElementById('status');
 
-  // Focus input on load
-  titleInput.focus();
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', init);
 
-  // Show menu container when input is focused or has content
-  titleInput.addEventListener('focus', () => {
-    menuContainer.classList.add('visible');
-  });
+// Event listeners
+saveBtn?.addEventListener('click', handleSave);
+openSettings?.addEventListener('click', () => chrome.runtime.openOptionsPage());
+settingsIcon?.addEventListener('click', () => chrome.runtime.openOptionsPage());
 
-  titleInput.addEventListener('input', () => {
-    if (titleInput.value.trim()) {
-      menuContainer.classList.add('visible');
+/**
+ * Initialize popup - check if credentials are configured
+ */
+async function init() {
+  try {
+    const { notionApiKey, notionDatabaseId } = await chrome.storage.local.get([
+      'notionApiKey',
+      'notionDatabaseId'
+    ]);
+
+    // Hide loading
+    loading.classList.add('hidden');
+
+    // Check if both credentials are set
+    if (notionApiKey && notionDatabaseId) {
+      // Show main interface
+      mainInterface.classList.remove('hidden');
     } else {
-      menuContainer.classList.remove('visible');
+      // Show setup required
+      setupRequired.classList.remove('hidden');
     }
-  });
-
-  // Menu trigger functionality
-  menuTrigger.addEventListener('click', () => {
-    const isExpanded = menuTrigger.classList.contains('expanded');
-    if (isExpanded) {
-      menuTrigger.classList.remove('expanded');
-      menuItems.classList.remove('visible');
-    } else {
-      menuTrigger.classList.add('expanded');
-      menuItems.classList.add('visible');
-    }
-  });
-
-  // Submit functionality
-  function handleSubmit() {
-    const filename = titleInput.value.trim();
-    if (filename) {
-      showActionOverlay(filename);
-    } else {
-      showStatusMessage('Please enter a filename', 'error');
-    }
+  } catch (error) {
+    console.error('Initialization error:', error);
+    loading.classList.add('hidden');
+    setupRequired.classList.remove('hidden');
   }
+}
 
-  titleInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSubmit();
-    } else if (e.key === 'Escape') {
-      hideActionOverlay();
+/**
+ * Handle save button click
+ */
+async function handleSave() {
+  // Disable button during save
+  saveBtn.disabled = true;
+  saveBtn.style.opacity = '0.6';
+  saveBtn.style.cursor = 'not-allowed';
+
+  showStatus('Reading clipboard...', 'info');
+
+  try {
+    // Read clipboard
+    const clipboardText = await navigator.clipboard.readText();
+
+    if (!clipboardText || clipboardText.trim() === '') {
+      showStatus('Clipboard is empty', 'error');
+      return;
     }
-  });
 
-  submitButton.addEventListener('click', handleSubmit);
+    showStatus('Saving to Notion...', 'info');
 
-  // Hide action overlay when pressing Escape
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      hideActionOverlay();
-    }
-  });
+    // Save to Notion
+    await saveToNotion(clipboardText);
 
-  function showActionOverlay(filename) {
-    actionOverlay.classList.remove('hidden');
-    actionOverlay.classList.add('visible');
-    
-    // Store the filename for later use
-    actionOverlay.dataset.filename = filename;
-  }
+    showStatus('✓ Saved! Enrichment will complete in ~60s', 'success');
 
-  function hideActionOverlay() {
-    actionOverlay.classList.remove('visible');
-    actionOverlay.classList.add('hidden');
-    titleInput.focus();
-  }
-
-  function showStatusMessage(message, type) {
-    statusMessage.textContent = message;
-    statusMessage.className = `status-message ${type} visible`;
-    
+    // Auto-hide success message after 3 seconds
     setTimeout(() => {
-      statusMessage.classList.remove('visible');
+      statusDiv.classList.add('hidden');
     }, 3000);
+
+  } catch (error) {
+    console.error('Save error:', error);
+    showStatus(`Error: ${error.message}`, 'error');
+  } finally {
+    // Re-enable button
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = '1';
+    saveBtn.style.cursor = 'pointer';
+  }
+}
+
+/**
+ * Save content to Notion database
+ */
+async function saveToNotion(content) {
+  // Get credentials
+  const { notionApiKey, notionDatabaseId } = await chrome.storage.local.get([
+    'notionApiKey',
+    'notionDatabaseId'
+  ]);
+
+  if (!notionApiKey || !notionDatabaseId) {
+    throw new Error('Notion credentials not configured');
   }
 
-  // Save Page button functionality
-  savePageBtn.addEventListener('click', async () => {
-    try {
-      savePageBtn.classList.add('loading');
-      const customTitle = validateInput(actionOverlay.dataset.filename || titleInput.value.trim(), 200);
-      
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
-      const results = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['content/content.js']
-      });
-      
-      const contentResults = await chrome.tabs.sendMessage(tab.id, {
-        action: 'extractContent',
-        customTitle: customTitle
-      });
-      
-      if (contentResults) {
-        const pageData = contentResults;
-        await chrome.runtime.sendMessage({
-          action: 'storeContent',
-          data: pageData
-        });
-        
-        showStatusMessage('Web page saved successfully!', 'success');
-        titleInput.value = '';
-        hideActionOverlay();
+  // Prepare Notion page content
+  const pageData = {
+    parent: {
+      database_id: notionDatabaseId
+    },
+    properties: {
+      // Only the Content property - let n8n enrichment handle the rest
+      Content: {
+        rich_text: [
+          {
+            text: {
+              content: content.substring(0, 2000) // Notion limit for rich text
+            }
+          }
+        ]
       }
-    } catch (error) {
-      console.error('Capture error:', error);
-      showStatusMessage('Failed to save page', 'error');
-    } finally {
-      savePageBtn.classList.remove('loading');
-    }
-  });
-
-  // Save Clipboard button functionality
-  saveClipboardBtn.addEventListener('click', async () => {
-    try {
-      saveClipboardBtn.classList.add('loading');
-      const customTitle = validateInput(actionOverlay.dataset.filename || titleInput.value.trim(), 200);
-      
-      const text = await navigator.clipboard.readText();
-      
-      if (!text || text.trim().length === 0) {
-        showStatusMessage('Clipboard is empty', 'error');
-        return;
-      }
-      
-      const validatedContent = validateInput(text.trim(), 100000);
-      
-      if (!validatedContent) {
-        showStatusMessage('Invalid clipboard content', 'error');
-        return;
-      }
-      
-      const clipboardData = {
-        title: customTitle || generateDefaultTitle(),
-        url: 'clipboard://local',
-        content: validatedContent,
-        timestamp: Date.now(),
-        hash: await generateHash(validatedContent + 'clipboard://local'),
-        metadata: {
-          source: 'clipboard',
-          type: 'text'
-        }
-      };
-      
-      await chrome.runtime.sendMessage({
-        action: 'storeContent',
-        data: clipboardData
-      });
-      
-      showStatusMessage('Clipboard content saved successfully!', 'success');
-      titleInput.value = '';
-      hideActionOverlay();
-      
-    } catch (error) {
-      console.error('Clipboard error:', error);
-      showStatusMessage('Failed to save clipboard', 'error');
-    } finally {
-      saveClipboardBtn.classList.remove('loading');
-    }
-  });
-
-  // Export functionality
-  exportBtn.addEventListener('click', async () => {
-    try {
-      const result = await chrome.storage.local.get(['pdcData']);
-      const data = result.pdcData || [];
-      
-      if (data.length === 0) {
-        showStatusMessage('No notes to export', 'error');
-        closeMenu();
-        return;
-      }
-      
-      // Export as JSON by default
-      const exportData = {
-        exportDate: new Date().toISOString(),
-        version: '1.0',
-        itemCount: data.length,
-        items: data
-      };
-      
-      const jsonString = JSON.stringify(exportData, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `notes-export-${timestamp}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      showStatusMessage(`Exported ${data.length} notes!`, 'success');
-      closeMenu();
-      
-    } catch (error) {
-      console.error('Export error:', error);
-      showStatusMessage('Failed to export notes', 'error');
-    }
-  });
-
-  // Notes functionality
-  notesBtn.addEventListener('click', () => {
-    showNotesSection();
-    closeMenu();
-  });
-
-  closeNotes.addEventListener('click', () => {
-    hideNotesSection();
-  });
-
-  function closeMenu() {
-    menuTrigger.classList.remove('expanded');
-    menuItems.classList.remove('visible');
-  }
-
-  function showNotesSection() {
-    document.body.classList.add('expanded');
-    notesSection.classList.add('expanded');
-    loadNotes();
-  }
-
-  function hideNotesSection() {
-    notesSection.classList.add('collapsing');
-    setTimeout(() => {
-      notesSection.classList.remove('expanded', 'collapsing');
-      document.body.classList.remove('expanded');
-    }, 500);
-  }
-
-  async function loadNotes() {
-    try {
-      const result = await chrome.storage.local.get(['pdcData']);
-      const data = result.pdcData || [];
-      
-      if (data.length === 0) {
-        notesList.innerHTML = '<div class="empty-notes">No notes yet. Create your first note!</div>';
-        return;
-      }
-      
-      const notesHTML = data.map((note, index) => `
-        <div class="note-item" data-index="${index}">
-          <div class="note-title">${sanitizeText(note.title || 'Untitled')}</div>
-          <div class="note-content">${sanitizeText((note.content || '').substring(0, 150))}${note.content && note.content.length > 150 ? '...' : ''}</div>
-          <div class="note-actions">
-            <button class="note-action copy" onclick="copyNote(${index})">Copy</button>
-            <button class="note-action delete" onclick="deleteNote(${index})">Delete</button>
-          </div>
-        </div>
-      `).join('');
-      
-      notesList.innerHTML = notesHTML;
-    } catch (error) {
-      console.error('Error loading notes:', error);
-      notesList.innerHTML = '<div class="empty-notes">Error loading notes</div>';
-    }
-  }
-
-  // Make functions global for onclick handlers
-  window.copyNote = async (index) => {
-    try {
-      const result = await chrome.storage.local.get(['pdcData']);
-      const data = result.pdcData || [];
-      
-      if (data[index]) {
-        const noteText = `${data[index].title || 'Untitled'}\n\n${data[index].content || ''}`;
-        await navigator.clipboard.writeText(noteText);
-        showStatusMessage('Note copied to clipboard!', 'success');
-      }
-    } catch (error) {
-      console.error('Error copying note:', error);
-      showStatusMessage('Failed to copy note', 'error');
     }
   };
 
-  window.deleteNote = async (index) => {
-    try {
-      const result = await chrome.storage.local.get(['pdcData']);
-      const data = result.pdcData || [];
-      
-      if (data[index]) {
-        data.splice(index, 1);
-        await chrome.storage.local.set({ pdcData: data });
-        showStatusMessage('Note deleted!', 'success');
-        loadNotes(); // Refresh the notes list
+  // If content is longer than 2000 chars, add it as page content blocks
+  if (content.length > 2000) {
+    pageData.children = createContentBlocks(content);
+  }
+
+  // Make API call
+  const response = await fetch('https://api.notion.com/v1/pages', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${notionApiKey}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(pageData)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Notion API error:', response.status, errorText);
+
+    // Parse error for user-friendly message
+    if (response.status === 401) {
+      throw new Error('Invalid API key');
+    } else if (response.status === 404) {
+      throw new Error('Database not found - check Database ID');
+    } else {
+      throw new Error(`Notion API error: ${response.status}`);
+    }
+  }
+
+  const result = await response.json();
+  console.log('Saved to Notion:', result.id);
+  return result;
+}
+
+/**
+ * Create Notion content blocks for long text
+ * Splits content into 2000-char chunks (Notion's block limit)
+ */
+function createContentBlocks(content) {
+  const blocks = [];
+  const chunkSize = 2000;
+
+  for (let i = 0; i < content.length; i += chunkSize) {
+    const chunk = content.substring(i, i + chunkSize);
+    blocks.push({
+      object: 'block',
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [
+          {
+            type: 'text',
+            text: { content: chunk }
+          }
+        ]
       }
-    } catch (error) {
-      console.error('Error deleting note:', error);
-      showStatusMessage('Failed to delete note', 'error');
-    }
-  };
-
-  // Essential utility functions
-  async function generateHash(input) {
-    if (!input || typeof input !== 'string') return '';
-    
-    try {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(input);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = new Uint8Array(hashBuffer);
-      const hashHex = Array.from(hashArray)
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-      
-      return hashHex.substring(0, 12);
-    } catch (error) {
-      console.error('Hash generation failed:', error);
-      return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-    }
+    });
   }
 
-  function generateDefaultTitle() {
-    const now = new Date();
-    return `Note - ${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-  }
+  return blocks;
+}
 
-  function validateInput(text, maxLength = 10000) {
-    if (!text || typeof text !== 'string') return '';
-    
-    if (text.length > maxLength) {
-      text = text.substring(0, maxLength);
-    }
-    
-    return sanitizeText(text);
-  }
-
-  function sanitizeText(text) {
-    if (!text || typeof text !== 'string') return '';
-    
-    const tempDiv = document.createElement('div');
-    tempDiv.textContent = text;
-    const sanitized = tempDiv.innerHTML;
-    
-    return sanitized
-      .replace(/[<>]/g, '')
-      .replace(/javascript:/gi, '')
-      .replace(/data:/gi, '')
-      .replace(/vbscript:/gi, '')
-      .trim();
-  }
-
-  function sanitizeFilename(filename) {
-    if (!filename || typeof filename !== 'string') return 'untitled';
-    
-    return filename
-      .replace(/[<>:"/\\|?*]/g, '_')
-      .replace(/\s+/g, '_')
-      .replace(/_{2,}/g, '_')
-      .replace(/^_|_$/g, '')
-      .substring(0, 100)
-      .toLowerCase() || 'untitled';
-  }
-
-});
+/**
+ * Show status message
+ */
+function showStatus(message, type) {
+  statusDiv.textContent = message;
+  statusDiv.className = `status ${type}`;
+  statusDiv.classList.remove('hidden');
+}
