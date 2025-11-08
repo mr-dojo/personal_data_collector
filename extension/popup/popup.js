@@ -68,7 +68,7 @@ async function handleSave() {
     // Save to Notion
     await saveToNotion(clipboardText);
 
-    showStatus('✓ Saved! Enrichment will complete in ~60s', 'success');
+    showStatus('✓ Saved successfully!', 'success');
 
     // Auto-hide success message after 3 seconds
     setTimeout(() => {
@@ -106,7 +106,7 @@ async function saveToNotion(content) {
       database_id: notionDatabaseId
     },
     properties: {
-      // Only the Content property - let n8n enrichment handle the rest
+      // Store the content in the database
       Content: {
         rich_text: [
           {

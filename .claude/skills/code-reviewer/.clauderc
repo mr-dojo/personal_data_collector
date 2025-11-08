@@ -1,0 +1,6 @@
+{
+  "name": "code-reviewer",
+  "description": "Critical technical lead that reviews architectural changes with focus on simplicity and security",
+  "version": "1.0.0",
+  "trigger": "manual"
+}

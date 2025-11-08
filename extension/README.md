@@ -1,35 +1,50 @@
-# Personal Data Collector - Chrome Extension
+# Clipboard to Notion
 
-Dead-simple browser extension that saves clipboard content directly to your Notion PDC database for enrichment.
+A simple, secure Chrome extension that saves your clipboard content directly to any Notion database.
+
+## What It Does
+
+**One thing, done well**: Reads your clipboard and creates a new page in your Notion database with that content.
+
+No assumptions. No workflows. No dependencies. Just a simple tool that connects Point A (your clipboard) to Point B (your Notion database).
 
 ## Features
 
-- **One-click save**: Copy text → Click extension → Saved to Notion
-- **Secure storage**: API credentials encrypted in Chrome's local storage
-- **Auto-enrichment**: Your n8n workflow picks up and enriches the content
-- **Zero complexity**: No backend needed - just extension → Notion API
+- **One-click save**: Copy text → Click extension → Content saved to Notion
+- **Secure**: API credentials encrypted in Chrome's local storage
+- **No backend**: Direct connection to Notion API via HTTPS
+- **Lightweight**: ~200 lines of code, minimal dependencies
+- **Flexible**: Works with any Notion database that has a "Content" property
 
-## Setup Instructions
+## Security
 
-### 1. Create Notion Integration
+- API keys stored in Chrome's encrypted `storage.local` API
+- Credentials never leave your machine except in HTTPS requests to Notion
+- No logging of sensitive data
+- Input validation on API keys and database IDs
+- Minimum permissions (only clipboard read + Notion API access)
 
-1. Go to https://www.notion.so/my-integrations
+## Setup
+
+### 1. Create a Notion Integration
+
+1. Visit [notion.so/my-integrations](https://www.notion.so/my-integrations)
 2. Click **"+ New integration"**
-3. Name: `PDC Browser Extension`
+3. Name it (e.g., "Clipboard to Notion")
 4. Select your workspace
 5. Capabilities: Read, Update, Insert content
 6. Copy the **Internal Integration Token** (starts with `secret_`)
 
 ### 2. Connect Integration to Database
 
-1. Open your PDC database in Notion
-2. Click the **"..."** menu (top right)
+1. Open your target database in Notion
+2. Click **"..."** (top right)
 3. Click **"Add connections"**
-4. Select **"PDC Browser Extension"**
+4. Select your integration
 
 ### 3. Get Database ID
 
-Your database URL looks like:
+From your database URL:
 ```
 https://notion.so/workspace/abc123def456?v=...
                           ^^^^^^^^^^^^
@@ -40,50 +55,56 @@ Copy the ID between the last `/` and the `?`
 
 ### 4. Install Extension
 
-1. Open Chrome and go to `chrome://extensions`
-2. Enable **Developer mode** (top right toggle)
+1. Open Chrome → `chrome://extensions`
+2. Enable **Developer mode** (top right)
 3. Click **"Load unpacked"**
-4. Select this `extension` folder
-5. Extension should now appear in your toolbar
+4. Select the `extension` folder
+5. Extension appears in your toolbar
 
-### 5. Configure Extension
+### 5. Configure
 
-1. Click the PDC extension icon
-2. You'll see "Setup Required"
-3. Click **"Open Settings"**
-4. Paste your **API Token** and **Database ID**
-5. Click **"Test Connection"** to verify
-6. Click **"Save Settings"**
+1. Click the extension icon
+2. Click **"Open Settings"**
+3. Paste your **API Token** and **Database ID**
+4. Click **"Test Connection"** to verify
+5. Click **"Save Settings"**
 
 ## Usage
 
 1. Copy any text (Cmd+C / Ctrl+C)
-2. Click the PDC extension icon
-3. Click **"Save Clipboard to PDC"**
-4. Done! ✓ Your n8n workflow will enrich it in ~60 seconds
+2. Click the extension icon
+3. Click **"Save Clipboard to Notion"**
+4. Done
 
 ## Requirements
 
-Your Notion database must have a **Content** property (type: Rich Text).
+Your Notion database must have a **Content** property (type: Text or Rich Text).
 
-That's the only required field - your n8n enrichment workflow handles all other properties (Title, Summary, Key Points, etc.)
+That's it. The extension will create a new page with your clipboard content in that property.
 
 ## Troubleshooting
 
-**"Invalid API key" error**
-- Check that your token starts with `secret_`
-- Verify the integration is connected to your database in Notion
+| Error | Solution |
+|-------|----------|
+| "Invalid API key" | Verify token starts with `secret_` and integration is connected to database |
+| "Database not found" | Double-check Database ID from URL |
+| "Clipboard is empty" | Copy text before clicking save |
 
-**"Database not found" error**
-- Double-check the Database ID from your URL
-- Make sure the integration has access to the database
+## Technical Details
 
-**"Clipboard is empty" error**
-- Copy some text first before clicking save
+**Permissions:**
+- `storage` - Store API credentials locally
+- `clipboardRead` - Read clipboard on user click
+- `https://api.notion.com/*` - Send content to Notion
 
-**Extension doesn't appear after installing**
-- Refresh the extensions page (`chrome://extensions`)
-- Make sure Developer mode is enabled
+**API Calls:**
+- Settings: `GET /v1/databases/{id}` to validate connection
+- Save: `POST /v1/pages` to create page with clipboard content
+
+**Content Handling:**
+- First 2000 characters stored in Content property
+- Additional content split into 2000-char blocks as page content
+- Content sent as-is (what you copy is what gets saved)
 
 ## File Structure
 
@@ -101,17 +122,26 @@ extension/
 └── icons/               # Extension icons
 ```
 
-## Security
+## What This Is (and Isn't)
 
-- API credentials are stored in Chrome's encrypted `storage.local`
-- Only your extension can access the stored credentials
-- Credentials never leave your machine except in HTTPS requests to Notion
-- Follow least-privilege: scope integration to only your PDC database
+**This is:**
+- A simple Lego block for building your own workflows
+- A secure clipboard → Notion transport
+- A foundation you can extend or integrate however you want
+
+**This is not:**
+- An automated workflow (you click, it saves, that's it)
+- A data enrichment tool (it saves exactly what you copy)
+- Tied to any specific use case (use it however you want)
 
 ## Version
 
-**v2.0.0** - Simplified Notion-first architecture
+**v2.0.0** - Simple, focused, secure
+
+## License
+
+MIT - Use it however you want
 
 ---
 
-Built with ❤️ for data sovereignty
+Built for people who want simple tools that do one thing well.
