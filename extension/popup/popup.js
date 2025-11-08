@@ -7,6 +7,10 @@ const openSettings = document.getElementById('openSettings');
 const settingsIcon = document.getElementById('settingsIcon');
 const statusDiv = document.getElementById('status');
 
+// Rate limiting
+let lastSaveTime = 0;
+const SAVE_COOLDOWN = 2000; // 2 seconds
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', init);
 
@@ -37,7 +41,7 @@ async function init() {
       setupRequired.classList.remove('hidden');
     }
   } catch (error) {
-    console.error('Initialization error:', error);
+    // Show setup on any error
     loading.classList.add('hidden');
     setupRequired.classList.remove('hidden');
   }
@@ -47,6 +51,14 @@ async function init() {
  * Handle save button click
  */
 async function handleSave() {
+  // Rate limiting - prevent rapid-fire saves
+  const now = Date.now();
+  if (now - lastSaveTime < SAVE_COOLDOWN) {
+    showStatus('Please wait a moment before saving again', 'error');
+    return;
+  }
+  lastSaveTime = now;
+
   // Disable button during save
   saveBtn.disabled = true;
   saveBtn.style.opacity = '0.6';
@@ -63,6 +75,13 @@ async function handleSave() {
       return;
     }
 
+    // Prevent memory issues from huge pastes (1MB limit)
+    const MAX_SIZE = 1024 * 1024;
+    if (clipboardText.length > MAX_SIZE) {
+      showStatus(`Clipboard too large (${Math.round(clipboardText.length / 1024)}KB max: 1MB)`, 'error');
+      return;
+    }
+
     showStatus('Saving to Notion...', 'info');
 
     // Save to Notion
@@ -76,7 +95,7 @@ async function handleSave() {
     }, 3000);
 
   } catch (error) {
-    console.error('Save error:', error);
+    // Don't log - may contain sensitive info
     showStatus(`Error: ${error.message}`, 'error');
   } finally {
     // Re-enable button
@@ -136,21 +155,20 @@ async function saveToNotion(content) {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Notion API error:', response.status, errorText);
+    // Don't log error details - may contain sensitive info
 
     // Parse error for user-friendly message
     if (response.status === 401) {
       throw new Error('Invalid API key');
     } else if (response.status === 404) {
-      throw new Error('Database not found - check Database ID');
+      throw new Error('Database not found');
     } else {
-      throw new Error(`Notion API error: ${response.status}`);
+      throw new Error(`Failed to save (${response.status})`);
     }
   }
 
   const result = await response.json();
-  console.log('Saved to Notion:', result.id);
+  // Success - no logging needed
   return result;
 }
 

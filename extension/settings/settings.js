@@ -27,9 +27,11 @@ async function loadSettings() {
       'notionDatabaseId'
     ]);
 
+    // Don't show API key - just indicate it's configured
     if (notionApiKey) {
-      apiKeyInput.value = notionApiKey;
+      apiKeyInput.placeholder = 'API key configured (leave blank to keep current)';
     }
+
     if (notionDatabaseId) {
       databaseIdInput.value = notionDatabaseId;
     }
@@ -48,27 +50,39 @@ async function loadSettings() {
  */
 async function saveSettings() {
   const apiKey = apiKeyInput.value.trim();
-  const databaseId = databaseIdInput.value.trim();
+  const databaseId = databaseIdInput.value.trim().replace(/-/g, '');
+
+  // If API key is blank, check if we have one saved
+  const { notionApiKey: savedApiKey } = await chrome.storage.local.get(['notionApiKey']);
+  const keyToUse = apiKey || savedApiKey;
 
   // Basic validation
-  if (!apiKey || !databaseId) {
+  if (!keyToUse || !databaseId) {
     showStatus('Please fill in both fields', 'error');
     return;
   }
 
-  // Remove format check - let Notion API validate the token
+  // Validate database ID format (32-char hex string)
+  if (!/^[a-f0-9]{32}$/i.test(databaseId)) {
+    showStatus('Invalid Database ID format', 'error');
+    return;
+  }
+
   showStatus('Validating credentials...', 'info');
 
   // Test the connection before saving
-  const isValid = await testNotionConnection(apiKey, databaseId);
+  const isValid = await testNotionConnection(keyToUse, databaseId);
 
   if (isValid) {
     try {
       await chrome.storage.local.set({
-        notionApiKey: apiKey,
+        notionApiKey: keyToUse,
         notionDatabaseId: databaseId
       });
       showStatus('✓ Settings saved successfully!', 'success');
+      // Update placeholder after save
+      apiKeyInput.value = '';
+      apiKeyInput.placeholder = 'API key configured (leave blank to keep current)';
     } catch (error) {
       showStatus(`Error saving settings: ${error.message}`, 'error');
     }
@@ -81,16 +95,26 @@ async function saveSettings() {
  */
 async function testConnection() {
   const apiKey = apiKeyInput.value.trim();
-  const databaseId = databaseIdInput.value.trim();
+  const databaseId = databaseIdInput.value.trim().replace(/-/g, '');
 
-  if (!apiKey || !databaseId) {
+  // If API key is blank, use saved one
+  const { notionApiKey: savedApiKey } = await chrome.storage.local.get(['notionApiKey']);
+  const keyToUse = apiKey || savedApiKey;
+
+  if (!keyToUse || !databaseId) {
     showStatus('Please fill in both fields first', 'error');
+    return;
+  }
+
+  // Validate database ID format
+  if (!/^[a-f0-9]{32}$/i.test(databaseId)) {
+    showStatus('Invalid Database ID format', 'error');
     return;
   }
 
   showStatus('Testing connection...', 'info');
 
-  const isValid = await testNotionConnection(apiKey, databaseId);
+  const isValid = await testNotionConnection(keyToUse, databaseId);
 
   if (isValid) {
     showStatus('✓ Connection successful!', 'success');
@@ -112,25 +136,20 @@ async function testNotionConnection(apiKey, databaseId) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Notion API error:', response.status, errorText);
+      // Don't log error details - may contain sensitive info
 
-      // Show more helpful error messages
-      if (response.status === 401) {
-        showStatus('❌ Invalid API token - check your integration token', 'error');
-      } else if (response.status === 404) {
-        showStatus('❌ Database not found - check Database ID and integration access', 'error');
-      } else if (response.status === 403) {
-        showStatus('❌ Access denied - make sure integration is connected to the database', 'error');
+      // Generic error messages to prevent information disclosure
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
+        showStatus('❌ Invalid credentials - check API token and Database ID', 'error');
       } else {
-        showStatus(`❌ Notion API error: ${response.status}`, 'error');
+        showStatus('❌ Connection failed - check your configuration', 'error');
       }
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('Connection test failed:', error);
+    // Don't log - may contain sensitive info
     showStatus('❌ Network error - check your internet connection', 'error');
     return false;
   }

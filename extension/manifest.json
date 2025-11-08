@@ -10,6 +10,9 @@
   "host_permissions": [
     "https://api.notion.com/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'"
+  },
   "action": {
     "default_popup": "popup/popup.html",
     "default_title": "Save to PDC",
