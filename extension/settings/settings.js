@@ -56,11 +56,7 @@ async function saveSettings() {
     return;
   }
 
-  if (!apiKey.startsWith('secret_')) {
-    showStatus('API key should start with "secret_"', 'error');
-    return;
-  }
-
+  // Remove format check - let Notion API validate the token
   showStatus('Validating credentials...', 'info');
 
   // Test the connection before saving
@@ -76,9 +72,8 @@ async function saveSettings() {
     } catch (error) {
       showStatus(`Error saving settings: ${error.message}`, 'error');
     }
-  } else {
-    showStatus('Invalid credentials. Please check your API key and Database ID.', 'error');
   }
+  // Error message already shown by testNotionConnection
 }
 
 /**
@@ -99,9 +94,8 @@ async function testConnection() {
 
   if (isValid) {
     showStatus('✓ Connection successful!', 'success');
-  } else {
-    showStatus('Connection failed. Please check your credentials.', 'error');
   }
+  // Error message already shown by testNotionConnection
 }
 
 /**
@@ -118,13 +112,26 @@ async function testNotionConnection(apiKey, databaseId) {
     });
 
     if (!response.ok) {
-      console.error('Notion API error:', response.status, await response.text());
+      const errorText = await response.text();
+      console.error('Notion API error:', response.status, errorText);
+
+      // Show more helpful error messages
+      if (response.status === 401) {
+        showStatus('❌ Invalid API token - check your integration token', 'error');
+      } else if (response.status === 404) {
+        showStatus('❌ Database not found - check Database ID and integration access', 'error');
+      } else if (response.status === 403) {
+        showStatus('❌ Access denied - make sure integration is connected to the database', 'error');
+      } else {
+        showStatus(`❌ Notion API error: ${response.status}`, 'error');
+      }
       return false;
     }
 
     return true;
   } catch (error) {
     console.error('Connection test failed:', error);
+    showStatus('❌ Network error - check your internet connection', 'error');
     return false;
   }
 }
