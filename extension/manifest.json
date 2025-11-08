@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Personal Data Collector",
-  "description": "Save clipboard content directly to Notion PDC database",
+  "name": "Clipboard to Notion",
+  "description": "Save clipboard content directly to any Notion database",
   "version": "2.0.0",
   "permissions": [
     "storage",
@@ -12,7 +12,7 @@
   ],
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Save to PDC",
+    "default_title": "Save Clipboard to Notion",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
