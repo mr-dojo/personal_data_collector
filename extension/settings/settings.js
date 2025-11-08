@@ -56,11 +56,6 @@ async function saveSettings() {
     return;
   }
 
-  if (!apiKey.startsWith('secret_')) {
-    showStatus('API key should start with "secret_"', 'error');
-    return;
-  }
-
   showStatus('Validating credentials...', 'info');
 
   // Test the connection before saving
