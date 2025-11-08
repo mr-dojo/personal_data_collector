@@ -6,8 +6,8 @@ Dead-simple browser extension that saves clipboard content directly to your Noti
 
 - **One-click save**: Copy text → Click extension → Saved to Notion
 - **Secure storage**: API credentials encrypted in Chrome's local storage
-- **Auto-enrichment**: Your n8n workflow picks up and enriches the content
 - **Zero complexity**: No backend needed - just extension → Notion API
+- **Simple & lightweight**: Minimal dependencies and straightforward setup
 
 ## Setup Instructions
 
@@ -60,13 +60,13 @@ Copy the ID between the last `/` and the `?`
 1. Copy any text (Cmd+C / Ctrl+C)
 2. Click the PDC extension icon
 3. Click **"Save Clipboard to PDC"**
-4. Done! ✓ Your n8n workflow will enrich it in ~60 seconds
+4. Done! ✓ Content saved to your database
 
 ## Requirements
 
 Your Notion database must have a **Content** property (type: Rich Text).
 
-That's the only required field - your n8n enrichment workflow handles all other properties (Title, Summary, Key Points, etc.)
+That's the only required field for the basic setup.
 
 ## Troubleshooting
 
