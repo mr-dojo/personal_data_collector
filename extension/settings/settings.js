@@ -59,9 +59,9 @@ async function saveSettings() {
   showStatus('Validating credentials...', 'info');
 
   // Test the connection before saving
-  const isValid = await testNotionConnection(apiKey, databaseId);
+  const result = await testNotionConnection(apiKey, databaseId);
 
-  if (isValid) {
+  if (result.success) {
     try {
       await chrome.storage.local.set({
         notionApiKey: apiKey,
@@ -72,7 +72,7 @@ async function saveSettings() {
       showStatus(`Error saving settings: ${error.message}`, 'error');
     }
   } else {
-    showStatus('Invalid credentials. Please check your API key and Database ID.', 'error');
+    showStatus(result.error || 'Invalid credentials. Please check your API key and Database ID.', 'error');
   }
 }
 
@@ -90,12 +90,12 @@ async function testConnection() {
 
   showStatus('Testing connection...', 'info');
 
-  const isValid = await testNotionConnection(apiKey, databaseId);
+  const result = await testNotionConnection(apiKey, databaseId);
 
-  if (isValid) {
+  if (result.success) {
     showStatus('✓ Connection successful!', 'success');
   } else {
-    showStatus('Connection failed. Please check your credentials.', 'error');
+    showStatus(result.error || 'Connection failed. Please check your credentials.', 'error');
   }
 }
 
@@ -113,14 +113,22 @@ async function testNotionConnection(apiKey, databaseId) {
     });
 
     if (!response.ok) {
-      console.error('Notion API error:', response.status, await response.text());
-      return false;
+      const errorText = await response.text();
+      console.error('Notion API error:', response.status, errorText);
+
+      if (response.status === 401) {
+        return { success: false, error: 'Invalid API key (401). Check your token.' };
+      } else if (response.status === 404) {
+        return { success: false, error: 'Database not found (404). Ensure the integration is added to this specific database.' };
+      } else {
+        return { success: false, error: `Notion API error: ${response.status}` };
+      }
     }
 
-    return true;
+    return { success: true };
   } catch (error) {
     console.error('Connection test failed:', error);
-    return false;
+    return { success: false, error: `Network error: ${error.message}` };
   }
 }
 
