@@ -33,23 +33,22 @@ No assumptions. No workflows. No dependencies. Just a simple tool that connects 
 3. Name it (e.g., "Clipboard to Notion")
 4. Select your workspace
 5. Capabilities: Read, Update, Insert content
-6. Copy the **Internal Integration Token** (starts with `secret_`)
+6. Copy the **Internal Integration Token** (starts with `secret_` or `ntn_`)
 
-### 2. Connect Integration to Database
+### 2. Connect Integration to Database (Crucial Step!)
 
 1. Open your target database in Notion
 2. Click **"..."** (top right)
 3. Click **"Add connections"**
-4. Select your integration
+4. Select your integration (search for the name you gave it)
+
+> **Note:** If you don't do this step, the extension will get a "Database not found" error.
 
 ### 3. Get Database ID
 
 From your database URL:
 ```
 https://notion.so/workspace/abc123def456?v=...
-                          ^^^^^^^^^^^^
-                          This is your Database ID
-```
 
 Copy the ID between the last `/` and the `?`
 

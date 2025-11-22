@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Settings - Clipboard to Notion</title>
   <link rel="stylesheet" href="settings.css">
 </head>
+
 <body>
   <div class="container">
     <header>
@@ -16,12 +18,7 @@
     <form id="settingsForm">
       <div class="form-group">
         <label for="apiKey">Notion Integration Token</label>
-        <input
-          type="password"
-          id="apiKey"
-          placeholder="secret_xxxxxxxxxxxxx..."
-          required
-        >
+        <input type="password" id="apiKey" placeholder="secret_xxxxxxxxxxxxx..." required>
         <small class="help-text">
           Create an integration at
           <a href="https://www.notion.so/my-integrations" target="_blank">notion.so/my-integrations</a>
@@ -30,12 +27,7 @@
 
       <div class="form-group">
         <label for="databaseId">Database ID</label>
-        <input
-          type="text"
-          id="databaseId"
-          placeholder="abc123def456..."
-          required
-        >
+        <input type="text" id="databaseId" placeholder="abc123def456..." required>
         <small class="help-text">
           Find this in your Notion database URL after the workspace name
         </small>
@@ -67,4 +59,5 @@
 
   <script src="settings.js"></script>
 </body>
+
 </html>

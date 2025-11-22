@@ -107,8 +107,8 @@ async function saveToNotion(content) {
     },
     properties: {
       // Store the content in the database
-      Content: {
-        rich_text: [
+      Title: {
+        title: [
           {
             text: {
               content: content.substring(0, 2000) // Notion limit for rich text
